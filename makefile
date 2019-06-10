@@ -16,6 +16,9 @@ SRC_DIR=./src
 
 all:
 
+libt2fs:
+	ar crs $(LIB_DIR)/libt2fs.a $(LIB_DIR)/t2fs.o $(LIB_DIR)/apidisk.o
+
 clean:
 	rm -rf $(LIB_DIR)/*.a $(BIN_DIR)/*.o $(SRC_DIR)/*~ $(INC_DIR)/*~ *~
 
