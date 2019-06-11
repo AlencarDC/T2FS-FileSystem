@@ -1,7 +1,29 @@
 
 /**
 */
+#include<stdbool.h>
 #include "t2fs.h"
+
+/****************** PRIVATE ******************/
+static MBR *mbr = NULL; // Estrutura contendo informações sobre o Master Boot Record (MBR)
+
+
+/*-----------------------------------------------------------------------------
+Função:	inicializa o MBR
+-----------------------------------------------------------------------------*/
+bool initMBR() {
+	BYTE buffer[SECTOR_SIZE];
+
+	if (read_sector(0, buffer) == 0) {
+		mbr = b
+		return true;
+	}
+
+	return false;
+}
+
+
+/****************** PUBLIC ******************/
 
 /*-----------------------------------------------------------------------------
 Função:	Informa a identificação dos desenvolvedores do T2FS.
