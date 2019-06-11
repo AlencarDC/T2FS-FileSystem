@@ -30,17 +30,6 @@ typedef struct {
 	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS 
 } SUPERBLOCK;
 
-/* Estrutura com as informacoes dos registros do arquivo de diretorio */
-#define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
-#define RECORD_REGULAR 0x01; // Entrada para arquivo regular
-#define RECORD_DIR 0x02; // Entrada para diretorio
-#define RECORD_LINK 0x03; // Entrada para softlinks
-typedef struct {
-	BYTE type; // Tipo de entrada. RECORD_INVALID, RECORD_REGULAR, RECORD_DIR e RECORD_LINK
-	char name[FILE_NAME_SIZE]; // Nome da entrada no diretorio
-	DWORD indexBlock; // Numero do bloco de indice do arquivo/diretorio
-} DIR_RECORD;
-
 /* Estrutura dos blocos de indice */
 typedef struct indexBlock {
 
@@ -48,6 +37,10 @@ typedef struct indexBlock {
 
 /** Registro com as informa��es da entrada de diret�rio, lida com readdir2 */
 #define MAX_FILE_NAME_SIZE 255
+#define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
+#define RECORD_REGULAR 0x01; // Entrada para arquivo regular
+#define RECORD_DIR 0x02; // Entrada para diretorio
+#define RECORD_LINK 0x03; // Entrada para softlinks
 typedef struct {
     char    name[MAX_FILE_NAME_SIZE+1]; /* Nome do arquivo cuja entrada foi lida do disco      */
     BYTE    fileType;                   /* Tipo do arquivo: regular (0x01) ou diret�rio (0x02) */
