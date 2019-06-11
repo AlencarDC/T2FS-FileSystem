@@ -27,7 +27,8 @@ typedef struct {
 	WORD indexBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de arquivos de indice
 	WORD indexBlockAreaSize; // Quantidade de blocos da area de blocos de indice
 	WORD blockSize; // Quantidade de setores de cada bloco
-	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS 
+	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS
+	DWORD rootDir; // Localizacao do diretorio raiz
 } SUPERBLOCK;
 
 /* Estrutura dos blocos de indice */
