@@ -1,27 +1,39 @@
 
 /**
 */
-#include<stdbool.h>
-#include "t2fs.h"
+#include <stdbool.h>
+#include "../include/t2fs.h"
 
 /****************** PRIVATE ******************/
-static MBR *mbr = NULL; // Estrutura contendo informações sobre o Master Boot Record (MBR)
+bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
+char *currentPath;	// Caminho corrente do sistema de arquivos
 
 
-/*-----------------------------------------------------------------------------
-Função:	inicializa o MBR
------------------------------------------------------------------------------*/
-bool initMBR() {
-	BYTE buffer[SECTOR_SIZE];
+HANDLER openFiles[MAX_FILE_OPEN];
 
-	if (read_sector(0, buffer) == 0) {
-		mbr = b
-		return true;
+bool initRootDir() {
+
+}
+
+bool init() {
+	if (initRootDir() == true) {
+		int i;
+		for (i = 0; i < MAX_FILE_OPEN; i++) {
+			openFiles[i].free = true;
+			//...
+		}
+
+		currentPath = "/";
+
+		initialized = true;
 	}
 
 	return false;
 }
 
+FILE2 createRecord(char *filename, int type) {
+	return -1;
+}
 
 /****************** PUBLIC ******************/
 
@@ -49,28 +61,40 @@ Função:	Função usada para criar um novo arquivo no disco e abrí-lo,
 		assumirá um tamanho de zero bytes.
 -----------------------------------------------------------------------------*/
 FILE2 create2 (char *filename) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return createRecord(filename, RECORD_REGULAR);
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para remover (apagar) um arquivo do disco. 
 -----------------------------------------------------------------------------*/
 int delete2 (char *filename) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função que abre um arquivo existente no disco.
 -----------------------------------------------------------------------------*/
 FILE2 open2 (char *filename) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para fechar um arquivo.
 -----------------------------------------------------------------------------*/
 int close2 (FILE2 handle) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
@@ -78,7 +102,10 @@ Função:	Função usada para realizar a leitura de uma certa quantidade
 		de bytes (size) de um arquivo.
 -----------------------------------------------------------------------------*/
 int read2 (FILE2 handle, char *buffer, int size) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
@@ -86,7 +113,10 @@ Função:	Função usada para realizar a escrita de uma certa quantidade
 		de bytes (size) de  um arquivo.
 -----------------------------------------------------------------------------*/
 int write2 (FILE2 handle, char *buffer, int size) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
@@ -95,63 +125,90 @@ Função:	Função usada para truncar um arquivo. Remove do arquivo
 		(current pointer), inclusive, até o seu final.
 -----------------------------------------------------------------------------*/
 int truncate2 (FILE2 handle) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Altera o contador de posição (current pointer) do arquivo.
 -----------------------------------------------------------------------------*/
 int seek2 (FILE2 handle, DWORD offset) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para criar um novo diretório.
 -----------------------------------------------------------------------------*/
 int mkdir2 (char *pathname) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para remover (apagar) um diretório do disco.
 -----------------------------------------------------------------------------*/
 int rmdir2 (char *pathname) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para alterar o CP (current path)
 -----------------------------------------------------------------------------*/
 int chdir2 (char *pathname) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para obter o caminho do diretório corrente.
 -----------------------------------------------------------------------------*/
 int getcwd2 (char *pathname, int size) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função que abre um diretório existente no disco.
 -----------------------------------------------------------------------------*/
 DIR2 opendir2 (char *pathname) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para ler as entradas de um diretório.
 -----------------------------------------------------------------------------*/
 int readdir2 (DIR2 handle, DIRENT2 *dentry) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
 Função:	Função usada para fechar um diretório.
 -----------------------------------------------------------------------------*/
 int closedir2 (DIR2 handle) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
@@ -160,7 +217,10 @@ Função:	Função usada para criar um caminho alternativo (softlink) com
 		arquivo ou diretório fornecido por filename.
 -----------------------------------------------------------------------------*/
 int ln2 (char *linkname, char *filename) {
-	return -1;
+	if (initialized == false && init() == false)
+		return ERROR;
+
+	return ERROR;
 }
 
 
