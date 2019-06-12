@@ -8,6 +8,11 @@
 
 #define	INVALID_PTR	-1
 
+#define MAX_FILE_OPEN 10
+
+#define SUCCESS 0
+#define ERROR -1
+
 typedef int FILE2;
 typedef int DIR2;
 
@@ -15,7 +20,7 @@ typedef unsigned char BYTE;
 typedef unsigned short int WORD;
 typedef unsigned int DWORD;
 
-#define FILE_NAME_SIZE 33 // 32??? /0 // Tamanho fixo do nome do arquivo ou diretorio
+#define FILE_NAME_SIZE 31  // Tamanho fixo do nome do arquivo ou diretorio
 
 #pragma pack(push, 1)
 
@@ -48,6 +53,11 @@ typedef struct {
     DWORD   fileSize;                   /* Numero de bytes do arquivo                          */
 } DIRENT2;
 
+/* Handler para arquivos abertos */
+typedef struct {
+	bool free; // Entrada no handler está livre ou não
+
+} HANDLER;
 #pragma pack(pop)
 
 
