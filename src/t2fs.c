@@ -1,22 +1,109 @@
 
 /**
 */
-#include <stdbool.h>
+#include <stdlib.h>
 #include "../include/t2fs.h"
+#include "../include/apidisk.h"
+#include "../include/buffer_control.h"
 
-/****************** PRIVATE ******************/
+
+/********************************************************************************/
+/************************************ PRIVATE ***********************************/
+/********************************************************************************/
 bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
+
 char *currentPath;	// Caminho corrente do sistema de arquivos
+DIR_RECORD *currentRecord; // Record/registro associado ao caminho corrente
+INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
+
+PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
+HANDLER openFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
+
+bool readPartInfoSectors() {
+	BYTE buffer[sizeof(DWORD)];
+	BYTE bufferSector[SECTOR_SIZE];
+
+	if (read_sector(0, bufferSector) == 0) {
+		partInfo.firstSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE);
+		partInfo.lastSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE + sizeof(DWORD));
+		return true;
+	}
+
+	return false;
+}
+
+bool readPartInfoBlocks() {
+	BYTE sectorBuffer[SECTOR_SIZE];
+	SUPERBLOCK superblock;
+
+	if (read_sector(partInfo.firstSectorAddress, sectorBuffer) == 0) {
+		memcpy(&superblock, sectorBuffer, sizeof(SUPERBLOCK));
+		//TODO
+		partInfo.dataBlocksStart = 0;
+		partInfo.indexBlocksStart = 0;
+
+	}
+	
+	return false;
+}
 
 
-HANDLER openFiles[MAX_FILE_OPEN];
+void cleanDisk() {
+	int i;
+	int size = partInfo.lastSectorAddress - partInfo.firstSectorAddress + 1;
+	BYTE cleanBuffer[256] = {0}; 
+	for (i = 0; i < size; i++)
+		write_sector(partInfo.firstSectorAddress + i, cleanBuffer);
+	
+}
+
+SUPERBLOCK createSuperblock(int sectorsPerBlock) {
+	SUPERBLOCK superblock;
+
+	int size = partInfo.lastSectorAddress - partInfo.firstSectorAddress + 1;
+	int totalBlocks = (size / sectorsPerBlock) - 1; // Um é destinado para o superbloco
+	int utilBlocks = (totalBlocks * sectorsPerBlock * SECTOR_SIZE * 8) / (sectorsPerBlock * SECTOR_SIZE * 8 + 1);
+	int totalSectorsBitmap = ceil((float)utilBlocks / (float)(SECTOR_SIZE * 8));
+	// Se for necessario apenas 1 setor para o bitmap, sera necessario separar os dois tipos de bitmaps
+	// isso acerreta em mudanças nos valores de blocos ja calculados.
+	// TODO
+	int indexBitmapSize = totalSectorsBitmap / 3;
+	int indexBlocksSize = utilBlocks / 3; //Numero de blocos
+
+
+	//superblock.id = {'T', '2', 'F', 'S'};
+	superblock.dataBlockBitmapSize = totalSectorsBitmap - indexBitmapSize;
+	superblock.indexBlockBitmapSize = indexBitmapSize;
+	superblock.indexBlockAreaSize = indexBlocksSize;
+	superblock.blockSize = sectorsPerBlock;
+	superblock.partitionSize = utilBlocks + 1; // Em blocos
+
+	return superblock;
+}
+
+INDEX_BLOCK *getIndexBlockByNumber(DWORD offset) {
+	//TODO
+}
+
+DIR_RECORD *getRecordByName(char *name) {
+	//TODO
+}
+
+bool initPartInfo() {
+	return (readPartInfoSectors() == true && readPartInfoBlocks() == true);
+}
 
 bool initRootDir() {
-
+	rootDirIndex = getIndexBlockByNumber(0);
+	
+	if (rootDirIndex != NULL)
+		return true;
+	
+	return false;
 }
 
 bool init() {
-	if (initRootDir() == true) {
+	if (initPartInfo() == true && initRootDir() == true) {
 		int i;
 		for (i = 0; i < MAX_FILE_OPEN; i++) {
 			openFiles[i].free = true;
@@ -24,6 +111,7 @@ bool init() {
 		}
 
 		currentPath = "/";
+		currentRecord = getRecordByName(".");
 
 		initialized = true;
 	}
@@ -34,8 +122,9 @@ bool init() {
 FILE2 createRecord(char *filename, int type) {
 	return -1;
 }
-
-/****************** PUBLIC ******************/
+/********************************************************************************/
+/************************************ PUBLIC ************************************/
+/********************************************************************************/
 
 /*-----------------------------------------------------------------------------
 Função:	Informa a identificação dos desenvolvedores do T2FS.
@@ -50,7 +139,31 @@ Função:	Formata logicamente o disco virtual t2fs_disk.dat para o sistema de
 		corresponde a um múltiplo de setores dados por sectors_per_block.
 -----------------------------------------------------------------------------*/
 int format2 (int sectors_per_block) {
-	return -1;
+	BYTE buffer[SECTOR_SIZE] = {0};
+	BYTE bitmapBuffer[SECTOR_SIZE] = {0};
+	if (readPartInfoSectors() == true) {
+		cleanDisk();
+		
+		// Escreve o superbloco 
+		SUPERBLOCK superblock = createSuperblock(sectors_per_block);
+		memcpy(buffer, &superblock, sizeof(SUPERBLOCK)); // so terá sentido se for usado mesmo endian na estrutura e no array
+		
+		if (write_sector(partInfo.firstSectorAddress, buffer) != 0)
+			return ERROR;
+		
+		// Escreve o bitmap de indices e dados
+		int i;
+		for (i = 0; i < (superblock.dataBlockBitmapSize + superblock.indexBlockBitmapSize); i++);
+			if (write_sector(sectors_per_block, bitmapBuffer) != 0)
+				return ERROR;
+
+		// Definindo ultimas informacoes sobre a particao
+		partInfo.dataBlocksStart = 0; //TODO
+		partInfo.indexBlocksStart = 0; //TODO
+
+		return SUCCESS;
+	}
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------

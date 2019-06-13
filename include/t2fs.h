@@ -2,8 +2,11 @@
 
 #ifndef __LIBT2FS___
 #define __LIBT2FS___
+#include <stdbool.h>
 
 #define	SECTOR_SIZE	256
+
+#define INIT_BYTE_PART_TABLE 8
 
 
 #define	INVALID_PTR	-1
@@ -23,30 +26,52 @@ typedef unsigned int DWORD;
 #define FILE_NAME_SIZE 31  // Tamanho fixo do nome do arquivo ou diretorio
 
 #pragma pack(push, 1)
+/* Informacoes relevantes sobre a particao */
+typedef struct{
+	DWORD firstSectorAddress;
+	DWORD lastSectorAddress;
+	DWORD indexBlocksStart;
+	DWORD dataBlocksStart;
+} PART_INFO;
 
 /* Registro com as informacoes do superbloco */ 
 typedef struct {
 	char id[4]; // Identifcacao do sistema de arquivos. Ex.: T2FS
-	WORD size;	// Tamanho do em quantidade de blocos para armazenar o SUPERBLOCO. Um bloco, o bloco 0
-	WORD blockBitmapSize; // Quantidade de blocos para armazenar o bitmap de blocos de dados
+	WORD dataBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de blocos de dados
 	WORD indexBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de arquivos de indice
 	WORD indexBlockAreaSize; // Quantidade de blocos da area de blocos de indice
 	WORD blockSize; // Quantidade de setores de cada bloco
 	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS
-	DWORD rootDir; // Localizacao do diretorio raiz
 } SUPERBLOCK;
+
+/* Informação dos endereços iniciais de bitmaps e area de indice e dados */
+/* NAO ESTA EM USO */
+typedef struct {
+	DWORD dataBlock; // Endereco do bloco inicial da area de blocos de dados
+	DWORD dataBitmap; // Endereco do bloco inicial do bitmap de dados
+	DWORD indexBlock; // Endereco do bloco inicial da area de bloco de indices
+	DWORD indexBitmap; // Endereco do bloco inicial do bitmap de indices
+} AREA_ADDRESSES;
 
 /* Estrutura dos blocos de indice */
 typedef struct indexBlock {
 
 } INDEX_BLOCK;
 
-/** Registro com as informa��es da entrada de diret�rio, lida com readdir2 */
-#define MAX_FILE_NAME_SIZE 255
+/* Registro de diretorio  */
 #define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
 #define RECORD_REGULAR 0x01; // Entrada para arquivo regular
 #define RECORD_DIR 0x02; // Entrada para diretorio
 #define RECORD_LINK 0x03; // Entrada para softlinks
+typedef struct {
+	BYTE type;
+	char name[FILE_NAME_SIZE + 1];
+	DWORD blockFileSize;
+	DWORD indexAddress;
+} DIR_RECORD;
+
+/** Registro com as informa��es da entrada de diret�rio, lida com readdir2 */
+#define MAX_FILE_NAME_SIZE 255
 typedef struct {
     char    name[MAX_FILE_NAME_SIZE+1]; /* Nome do arquivo cuja entrada foi lida do disco      */
     BYTE    fileType;                   /* Tipo do arquivo: regular (0x01) ou diret�rio (0x02) */
@@ -56,10 +81,54 @@ typedef struct {
 /* Handler para arquivos abertos */
 typedef struct {
 	bool free; // Entrada no handler está livre ou não
-
+	DIR_RECORD record;
+	char *path;
+	DWORD pointer;
 } HANDLER;
 #pragma pack(pop)
 
+
+
+/********************************************************************************/
+/************************************ PRIVATE ***********************************/
+/********************************************************************************/
+
+// Le informacoes sobre os limites da particao contidos no MBR
+bool readPartInfoSectors();
+
+// Le informacoes sobre enderecos iniciais dos blocos de indice e dados contidos no Superbloco
+bool readPartInfoBlocks();
+
+// Usado na formatacao para zerar todas posicoes do disco
+void cleanDisk();
+
+// Realiza os calculos para preencer as informacoes da estrutura de superbloco e retorna-la
+SUPERBLOCK createSuperblock(int sectorsPerBlock);
+
+// Retorna o bloco de indice dado pelo numero passado.
+// 		offset -> deslocamento a partir do primeiro bloco de indice
+INDEX_BLOCK *getIndexBlockByNumber(DWORD offset);
+
+// Retorna registor do diretorio dado seu nome
+DIR_RECORD *getRecordByName(char *name);
+
+// Inicializa a estrutura de partInfo, faz uma chamada para readPartInfoSectors() e para readpartInfoBlocks();
+bool initPartInfo();
+
+// Inicializa as globais usadas para gerenciar o diretorio raiz, basicamente o bloco de indice da raiz
+bool initRootDir();
+
+// Faz a chamada para inicializar todas outras estruturas (initPartInfo() e initRootDir() e tambem inicializa o HANDLER de arquivos abertos
+bool init();
+
+// Realiza a criacao de um novo record/registro no diretorio corrente
+FILE2 createRecord(char *filename, int type);
+
+
+
+/********************************************************************************/
+/************************************ PUBLIC ************************************/
+/********************************************************************************/
 
 /*-----------------------------------------------------------------------------
 Fun��o: Usada para identificar os desenvolvedores do T2FS.
