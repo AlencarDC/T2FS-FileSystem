@@ -1,13 +1,21 @@
 #include "../include/buffer_control.h"
 #include <stdlib.h>
 
-/* Converte um os 4 primeiros bytes de um buffer para um DWORD (4 bytes) 
-Assume que a primeira posicao do vetor de bytes do buffer seja a parte menos significativa*/
-DWORD bufferToDWORD(BYTE *buffer) {
+/* Quebra um buffer e retorna apenas a parte espeicificada*/
+BYTE *getValueFromBuffer(BYTE *buffer, int initialByte, int size) {
     int i;
-    DWORD value = 0;
-    for (i = 0; i < 4; i++) {
-        value += buffer[i] << (8*i); 
+    BYTE *value = (BYTE *) malloc(size);
+
+    for (i = 0; i < size; i++) {
+        value[i] = buffer[initialByte + i]; 
     }
+
     return value;
+}
+
+DWORD bufferToDWORD(BYTE *buffer, int initialByte) {
+    BYTE *value = getValueFromBuffer(buffer, initialByte, sizeof(DWORD));
+    DWORD result = (value[3] << 24) | (value[2] << 16) | (value[1] << 8) | value[0];
+    free(value);
+    return result;
 }
