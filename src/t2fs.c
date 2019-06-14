@@ -1,7 +1,9 @@
 
 /**
 */
-#include <stdlib.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
 #include "../include/t2fs.h"
 #include "../include/apidisk.h"
 #include "../include/buffer_control.h"
@@ -17,7 +19,28 @@ DWORD currentDirIndexPointer; // Ponteiro de bloco de indice de diretorio associ
 INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
-HANDLER openFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
+HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
+
+void _printSuperblock(SUPERBLOCK superblock) {
+	printf("\n\nSUPERBLOCK:\n");
+	printf("ID: %.4s\n", superblock.id);
+	printf("BlockSize: %d | 0x%x\n", superblock.blockSize, superblock.blockSize);
+	printf("PartitionSize: %d | 0x%x\n", superblock.partitionSize, superblock.partitionSize);
+	printf("NumberOfPointers: %d | 0x%x\n", superblock.numberOfPointers, superblock.numberOfPointers);
+	printf("bitmapSectorsSize: %d | 0x%x\n", superblock.bitmapSectorsSize, superblock.bitmapSectorsSize);
+	printf("dataBlockAreaSize: %d | 0x%x\n", superblock.dataBlockAreaSize, superblock.dataBlockAreaSize);
+	printf("indexBlockAreaSize: %d | 0x%x\n", superblock.indexBlockAreaSize, superblock.indexBlockAreaSize);
+}
+
+void _printPartInfo() {
+	printf("\n\nPARTINFO:\n");
+	printf("BlockSize: %d | 0x%x\n", partInfo.blockSize, partInfo.blockSize);
+	printf("dataBlocksStart: %d | 0x%x\n", partInfo.dataBlocksStart, partInfo.dataBlocksStart);
+	printf("indexBlocksStart: %d | 0x%x\n", partInfo.indexBlocksStart, partInfo.indexBlocksStart);
+	printf("firstSectorAddress: %d | 0x%x\n", partInfo.firstSectorAddress, partInfo.firstSectorAddress);
+	printf("lastSectorAddress: %d | 0x%x\n", partInfo.lastSectorAddress, partInfo.lastSectorAddress);
+	printf("numberOfPointers: %d | 0x%x\n", partInfo.numberOfPointers, partInfo.numberOfPointers);
+}
 
 bool readPartInfoSectors() {
 	BYTE buffer[sizeof(DWORD)];
@@ -63,24 +86,23 @@ void cleanDisk() {
 SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	SUPERBLOCK superblock;
 
-	int size = partInfo.lastSectorAddress - partInfo.firstSectorAddress + 1;
-	int totalBlocks = (size / sectorsPerBlock) - 1; // Um é destinado para o superbloco
+	int size = partInfo.lastSectorAddress - partInfo.firstSectorAddress + 1; // Tamanho da particao em setores
+	int totalBlocks =  (size - 1) / sectorsPerBlock; // Superbloco ocupa 1 setor
 	int utilBlocks = (totalBlocks * sectorsPerBlock * SECTOR_SIZE * 8) / (sectorsPerBlock * SECTOR_SIZE * 8 + 1);
 	int totalSectorsBitmap = ceil((float)utilBlocks / (float)(SECTOR_SIZE * 8));
-	// Se for necessario apenas 1 setor para o bitmap, sera necessario separar os dois tipos de bitmaps
-	// isso acerreta em mudanças nos valores de blocos ja calculados.
-	// TODO
-	int indexBitmapSize = totalSectorsBitmap / 3;
-	int indexBlocksSize = utilBlocks / 3; //Numero de blocos
 
+	int indexBlocksSize = utilBlocks / 3; //Numero de blocos de indice
+	int remainingBlocks = utilBlocks % 3; // Blocos que sobraram
+	int dataBlocksSize = (utilBlocks - indexBlocksSize) + remainingBlocks; // Numero de blocos de dados
 
-	//superblock.id = {'T', '2', 'F', 'S'};
-	superblock.dataBlockBitmapSize = totalSectorsBitmap - indexBitmapSize;
-	superblock.indexBlockBitmapSize = indexBitmapSize;
+	char id[4] = {'T', '2', 'F', 'S'};
+	memcpy(&superblock.id, &id, 4);
+	superblock.bitmapSectorsSize = totalSectorsBitmap;
+	superblock.dataBlockAreaSize = dataBlocksSize;
 	superblock.indexBlockAreaSize = indexBlocksSize;
 	superblock.blockSize = sectorsPerBlock;
-	superblock.partitionSize = utilBlocks + 1; // Em blocos
-	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE * 8/(int) sizeof(DWORD);
+	superblock.partitionSize = utilBlocks; // Em blocos
+	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE /(int) sizeof(DWORD);
 
 	return superblock;
 }
@@ -123,7 +145,8 @@ bool initPartInfo() {
 }
 
 bool initRootDir() {
-	rootDirIndex = getIndexBlockByNumber(0);
+	//TODOOTODODTODOTODO MATHEUS
+	rootDirIndex = getIndexBlockByPointer(0,0);
 	
 	if (rootDirIndex != NULL)
 		return true;
@@ -135,12 +158,12 @@ bool init() {
 	if (initPartInfo() == true && initRootDir() == true) {
 		int i;
 		for (i = 0; i < MAX_FILE_OPEN; i++) {
-			openFiles[i].free = true;
+			openedFiles[i].free = true;
 			//...
 		}
 
 		currentPath = "/";
-		currentRecord = getRecordByName(".");
+		//currentRecord = getRecordByName("."); // Nao sei pq o matheus removeu essa variavel. Dps eu pergunto
 
 		initialized = true;
 	}
@@ -153,6 +176,17 @@ FILE2 createRecord(char *filename, int type) {
 	
 	return -1;
 }
+
+bool isOpened(FILE2 handle) {
+	return (handle >= 0 && openedFiles[handle].free == true);
+}
+
+
+int readFile(FILE2 handle, BYTE *buffer, int size){
+	int i;
+
+}
+
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
@@ -171,26 +205,33 @@ Função:	Formata logicamente o disco virtual t2fs_disk.dat para o sistema de
 -----------------------------------------------------------------------------*/
 int format2 (int sectors_per_block) {
 	BYTE buffer[SECTOR_SIZE] = {0};
-	BYTE bitmapBuffer[SECTOR_SIZE] = {0};
+
 	if (readPartInfoSectors() == true) {
 		cleanDisk();
 		
 		// Escreve o superbloco 
 		SUPERBLOCK superblock = createSuperblock(sectors_per_block);
 		memcpy(buffer, &superblock, sizeof(SUPERBLOCK)); // so terá sentido se for usado mesmo endian na estrutura e no array
-		
+		_printSuperblock(superblock);
+
 		if (write_sector(partInfo.firstSectorAddress, buffer) != 0)
 			return ERROR;
 		
 		// Escreve o bitmap de indices e dados
 		int i;
-		for (i = 0; i < (superblock.dataBlockBitmapSize + superblock.indexBlockBitmapSize); i++);
-			if (write_sector(sectors_per_block, bitmapBuffer) != 0)
+		for(i = 0; i < SECTOR_SIZE ; i++) { // Bitmap com todos bits em 1;
+			buffer[i] = 0xFF;
+		} 
+		for (i = 0; i < superblock.bitmapSectorsSize; i++)
+			if (write_sector(partInfo.firstSectorAddress + 1 + i, buffer) != 0)
 				return ERROR;
+		
 
 		// Definindo ultimas informacoes sobre a particao
-		partInfo.dataBlocksStart = 0; //TODO
-		partInfo.indexBlocksStart = 0; //TODO
+		partInfo.indexBlocksStart = partInfo.firstSectorAddress + superblock.bitmapSectorsSize + 1; // Inicio + bitmap + superbloco
+		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
+		partInfo.numberOfPointers = superblock.numberOfPointers;
+		_printPartInfo();
 
 		return SUCCESS;
 	}
@@ -248,6 +289,10 @@ Função:	Função usada para realizar a leitura de uma certa quantidade
 int read2 (FILE2 handle, char *buffer, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	if (isOpened(handle) == true) 
+		if (readFile(handle, buffer, size) == 0)
+			return SUCCESS;
 
 	return ERROR;
 }
