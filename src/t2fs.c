@@ -148,8 +148,17 @@ bool init() {
 	return false;
 }
 
+int findEmptyEntry(BYTE *indexBlock, BYTE *dataBlockBuffer, DWORD &blockPointer, int &initialByte);
+
 
 FILE2 createRecord(char *filename, int type) {
+	DWORD indexBlockPointer = currentDirIndexPointer;
+	BYTE *indexBlockBuffer = malloc(sizeof(BYTE * SECTOR_SIZE * partInfo.blockSize ));
+	BYTE *dataBlockBuffer
+	getIndexBlockByPointer(indexBlockBuffer,indexBlockPointer);
+
+
+
 	
 	return -1;
 }
