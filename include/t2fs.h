@@ -8,9 +8,9 @@
 
 #define INIT_BYTE_PART_TABLE 8
 
-
+#define SECTOR_ERROR -31
 #define	INVALID_PTR	-1
-
+#define NULL_INDEX_POINTER 0
 #define MAX_FILE_OPEN 10
 
 #define SUCCESS 0
@@ -32,6 +32,8 @@ typedef struct{
 	DWORD lastSectorAddress;
 	DWORD indexBlocksStart;
 	DWORD dataBlocksStart;
+	DWORD numberOfPointers;
+	DWORD blockSize;
 } PART_INFO;
 
 /* Registro com as informacoes do superbloco */ 
@@ -42,6 +44,7 @@ typedef struct {
 	WORD indexBlockAreaSize; // Quantidade de blocos da area de blocos de indice
 	WORD blockSize; // Quantidade de setores de cada bloco
 	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS
+	DWORD numberOfPointers; //Quantidade de ponteiros no bloco de indice
 } SUPERBLOCK;
 
 /* Informação dos endereços iniciais de bitmaps e area de indice e dados */

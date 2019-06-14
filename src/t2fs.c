@@ -13,7 +13,7 @@
 bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
 
 char *currentPath;	// Caminho corrente do sistema de arquivos
-DIR_RECORD *currentRecord; // Record/registro associado ao caminho corrente
+DWORD currentDirIndexPointer; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
 INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
@@ -41,6 +41,9 @@ bool readPartInfoBlocks() {
 		//TODO
 		partInfo.dataBlocksStart = 0;
 		partInfo.indexBlocksStart = 0;
+
+		//Adição do número de ponteiros de indice
+		partInfo.numberOfPointers = superblock.numberOfPointers;
 
 	}
 	
@@ -77,13 +80,11 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	superblock.indexBlockAreaSize = indexBlocksSize;
 	superblock.blockSize = sectorsPerBlock;
 	superblock.partitionSize = utilBlocks + 1; // Em blocos
+	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE * 8/(int) sizeof(DWORD);
 
 	return superblock;
 }
 
-INDEX_BLOCK *getIndexBlockByNumber(DWORD offset) {
-	//TODO
-}
 
 DIR_RECORD *getRecordByName(char *name) {
 	//TODO
@@ -119,7 +120,9 @@ bool init() {
 	return false;
 }
 
+
 FILE2 createRecord(char *filename, int type) {
+	
 	return -1;
 }
 /********************************************************************************/
