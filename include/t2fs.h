@@ -49,14 +49,6 @@ typedef struct {
 	DWORD numberOfPointers; //Quantidade de ponteiros no bloco de indice
 } SUPERBLOCK;
 
-/* Informação dos endereços iniciais de bitmaps e area de indice e dados */
-/* NAO ESTA EM USO */
-typedef struct {
-	DWORD dataBlock; // Endereco do bloco inicial da area de blocos de dados
-	DWORD dataBitmap; // Endereco do bloco inicial do bitmap de dados
-	DWORD indexBlock; // Endereco do bloco inicial da area de bloco de indices
-	DWORD indexBitmap; // Endereco do bloco inicial do bitmap de indices
-} AREA_ADDRESSES;
 
 /* Estrutura dos blocos de indice */
 typedef struct indexBlock {
