@@ -17,7 +17,7 @@ DIR_RECORD *currentRecord; // Record/registro associado ao caminho corrente
 INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
-HANDLER openFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
+HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
 
 bool readPartInfoSectors() {
 	BYTE buffer[sizeof(DWORD)];
@@ -106,7 +106,7 @@ bool init() {
 	if (initPartInfo() == true && initRootDir() == true) {
 		int i;
 		for (i = 0; i < MAX_FILE_OPEN; i++) {
-			openFiles[i].free = true;
+			openedFiles[i].free = true;
 			//...
 		}
 
@@ -122,6 +122,17 @@ bool init() {
 FILE2 createRecord(char *filename, int type) {
 	return -1;
 }
+
+bool isOpened(FILE2 handle) {
+	return (handle >= 0 && openedFiles[handle].free == true);
+}
+
+
+int readFile(FILE2 handle, BYTE *buffer, int size){
+	int i;
+
+}
+
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
@@ -217,6 +228,10 @@ Função:	Função usada para realizar a leitura de uma certa quantidade
 int read2 (FILE2 handle, char *buffer, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	if (isOpened(handle) == true) 
+		if (readFile(handle, buffer, size) == 0)
+			return SUCCESS;
 
 	return ERROR;
 }
