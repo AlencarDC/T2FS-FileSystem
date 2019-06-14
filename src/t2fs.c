@@ -80,7 +80,7 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	superblock.indexBlockAreaSize = indexBlocksSize;
 	superblock.blockSize = sectorsPerBlock;
 	superblock.partitionSize = utilBlocks + 1; // Em blocos
-	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE * 8/(int) sizeof(DWORD);
+	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE * 8/(int) sizeof(BLOCK_POINTER);
 
 	return superblock;
 }
@@ -152,12 +152,45 @@ int findEmptyEntry(BYTE *indexBlock, BYTE *dataBlockBuffer, DWORD &blockPointer,
 
 
 FILE2 createRecord(char *filename, int type) {
+	
 	DWORD indexBlockPointer = currentDirIndexPointer;
-	BYTE *indexBlockBuffer = malloc(sizeof(BYTE * SECTOR_SIZE * partInfo.blockSize ));
-	BYTE *dataBlockBuffer
+	int blockSizeInBytes = SECTOR_SIZE * partInfo.blockSize *sizeof(BYTE);
+	int indexIterator, i;
+	DWORD extractedPointer;
+
+	int numberOfDirRecords = sizeof(DIR_RECORD) / partInfo.blockSize * SECTOR_SIZE;
+
+	//Buffers para fetch de bloco de indice e bloco de dados
+	BYTE *indexBlockBuffer = malloc(blockSizeInBytes);
+	BYTE *dataBlockBuffer = malloc(blockSizeInBytes);
+
+	//Record a ser registrado 
+	DIR_RECORD newRecord;
+	newRecord.blockFileSize = 0;
+	strcpy(newRecord.name,filename);
+	newRecord.type = type;
+	//TODO:Alocar bloco de indices e bloco de dados consistentes pro arquivo
+	
+	//Fetch do bloco de indices do diretorio corrente
 	getIndexBlockByPointer(indexBlockBuffer,indexBlockPointer);
 
+	for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
+		extractedPointer = bufferToDWORD(indexBlockBuffer,indexIterator * sizeof(DWORD));
 
+		if(extractedPointer == NULL_INDEX_POINTER){
+			//aloca bloco de dados
+			//aponta para bloco de dados
+			//escreve newRecord no inicio
+			//retorna
+		}
+		else{
+			getDataBlockByPointer(dataBlockBuffer,extractedPointer);
+			//Percorre as entadas de diretório no bloco
+		}
+	}
+
+
+	
 
 	
 	return -1;
@@ -197,9 +230,11 @@ int format2 (int sectors_per_block) {
 			if (write_sector(sectors_per_block, bitmapBuffer) != 0)
 				return ERROR;
 
+
 		// Definindo ultimas informacoes sobre a particao
 		partInfo.dataBlocksStart = 0; //TODO
 		partInfo.indexBlocksStart = 0; //TODO
+		
 
 		return SUCCESS;
 	}

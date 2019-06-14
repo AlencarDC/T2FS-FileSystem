@@ -3,6 +3,7 @@
 #ifndef __LIBT2FS___
 #define __LIBT2FS___
 #include <stdbool.h>
+#include <string.h>
 
 #define	SECTOR_SIZE	256
 #define INIT_BYTE_PART_TABLE 8
@@ -61,6 +62,11 @@ typedef struct {
 typedef struct indexBlock {
 
 } INDEX_BLOCK;
+
+typedef struct blockPointer{
+	BYTE valid;
+	DWORD blockPointer;
+}BLOCK_POINTER;
 
 /* Registro de diretorio  */
 #define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
