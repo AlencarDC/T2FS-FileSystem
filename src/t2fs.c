@@ -85,6 +85,34 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	return superblock;
 }
 
+int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
+	int i,j;
+	BYTE sectorBuffer[SECTOR_SIZE]; 
+	DWORD initialSector = offset + (pointer * (DWORD)blockSize);
+
+	for(i = 0; i < blockSize;i++){
+		//Faz leitura e verifica se houve erro ao ler, se sim, aborta e retorna cod erro.
+		if (read_sector(initialSector + i,sectorBuffer) != 0){
+			printf("Erro ao ler setor ao preencher bloco");
+			return SECTOR_ERROR;
+		}
+		//Copia setor para block
+		for(j = 0; j < SECTOR_SIZE; j++){
+			block[SECTOR_SIZE*i + j] = sectorBuffer[j];
+		}
+
+		
+	}
+
+}
+
+int getIndexBlockByPointer(BYTE *indexBlock,DWORD pointer){
+	return getBlockByPointer(indexBlock,pointer,partInfo.indexBlocksStart,partInfo.blockSize);
+}
+
+int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer){
+	return getBlockByPointer(dataBlock,pointer,partInfo.dataBlocksStart,partInfo.blockSize);
+}
 
 DIR_RECORD *getRecordByName(char *name) {
 	//TODO
