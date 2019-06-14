@@ -8,9 +8,9 @@
 
 #define INIT_BYTE_PART_TABLE 8
 
-
+#define SECTOR_ERROR -31
 #define	INVALID_PTR	-1
-
+#define NULL_INDEX_POINTER 0
 #define MAX_FILE_OPEN 10
 
 #define SUCCESS 0
@@ -32,6 +32,8 @@ typedef struct{
 	DWORD lastSectorAddress;
 	DWORD indexBlocksStart;
 	DWORD dataBlocksStart;
+	DWORD numberOfPointers;
+	DWORD blockSize;
 } PART_INFO;
 
 /* Registro com as informacoes do superbloco */ 
@@ -42,6 +44,7 @@ typedef struct {
 	WORD indexBlockAreaSize; // Quantidade de blocos da area de blocos de indice
 	WORD blockSize; // Quantidade de setores de cada bloco
 	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS
+	DWORD numberOfPointers; //Quantidade de ponteiros no bloco de indice
 } SUPERBLOCK;
 
 /* Informação dos endereços iniciais de bitmaps e area de indice e dados */
@@ -124,7 +127,14 @@ bool init();
 // Realiza a criacao de um novo record/registro no diretorio corrente
 FILE2 createRecord(char *filename, int type);
 
+//Armazena em block o bloco apontado em pointer dado o offset de inicio da área de blocos usadae tamanho do bloco.
+int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize);
 
+//Armazena em indexBlock o bloco de indices apontado por pointer
+int getIndexBlockByPointer(BYTE *indexBlock,DWORD pointer);
+
+//Armazena em dataBlock o bloco de dados apontado por pointer
+int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer);
 
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
