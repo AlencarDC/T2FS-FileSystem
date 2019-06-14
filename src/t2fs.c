@@ -13,7 +13,7 @@
 bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
 
 char *currentPath;	// Caminho corrente do sistema de arquivos
-DIR_RECORD *currentRecord; // Record/registro associado ao caminho corrente
+DWORD currentDirIndexPointer; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
 INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
@@ -41,6 +41,9 @@ bool readPartInfoBlocks() {
 		//TODO
 		partInfo.dataBlocksStart = 0;
 		partInfo.indexBlocksStart = 0;
+
+		//Adição do número de ponteiros de indice
+		partInfo.numberOfPointers = superblock.numberOfPointers;
 
 	}
 	
@@ -77,12 +80,38 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	superblock.indexBlockAreaSize = indexBlocksSize;
 	superblock.blockSize = sectorsPerBlock;
 	superblock.partitionSize = utilBlocks + 1; // Em blocos
+	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE * 8/(int) sizeof(DWORD);
 
 	return superblock;
 }
 
-INDEX_BLOCK *getIndexBlockByNumber(DWORD offset) {
-	//TODO
+int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
+	int i,j;
+	BYTE sectorBuffer[SECTOR_SIZE]; 
+	DWORD initialSector = offset + (pointer * (DWORD)blockSize);
+
+	for(i = 0; i < blockSize;i++){
+		//Faz leitura e verifica se houve erro ao ler, se sim, aborta e retorna cod erro.
+		if (read_sector(initialSector + i,sectorBuffer) != 0){
+			printf("Erro ao ler setor ao preencher bloco");
+			return SECTOR_ERROR;
+		}
+		//Copia setor para block
+		for(j = 0; j < SECTOR_SIZE; j++){
+			block[SECTOR_SIZE*i + j] = sectorBuffer[j];
+		}
+
+		
+	}
+
+}
+
+int getIndexBlockByPointer(BYTE *indexBlock,DWORD pointer){
+	return getBlockByPointer(indexBlock,pointer,partInfo.indexBlocksStart,partInfo.blockSize);
+}
+
+int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer){
+	return getBlockByPointer(dataBlock,pointer,partInfo.dataBlocksStart,partInfo.blockSize);
 }
 
 DIR_RECORD *getRecordByName(char *name) {
@@ -119,7 +148,9 @@ bool init() {
 	return false;
 }
 
+
 FILE2 createRecord(char *filename, int type) {
+	
 	return -1;
 }
 /********************************************************************************/
