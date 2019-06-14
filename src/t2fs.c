@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../include/t2fs.h"
+#include "../include/bitmap.h"
 #include "../include/apidisk.h"
 #include "../include/buffer_control.h"
 
@@ -40,6 +41,20 @@ void _printPartInfo() {
 	printf("firstSectorAddress: %d | 0x%x\n", partInfo.firstSectorAddress, partInfo.firstSectorAddress);
 	printf("lastSectorAddress: %d | 0x%x\n", partInfo.lastSectorAddress, partInfo.lastSectorAddress);
 	printf("numberOfPointers: %d | 0x%x\n", partInfo.numberOfPointers, partInfo.numberOfPointers);
+}
+
+DWORD getFreeIndexBlock() {
+	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
+	setBitmap(BITMAP_INDEX, offset, 0);
+
+	return (partInfo.indexBlocksStart + offset);
+}
+
+DWORD getFreeDataBlock() {
+	DWORD offset = searchBitmap(BITMAP_DATA, 1);
+	setBitmap(BITMAP_DATA, offset, 0);
+	
+	return (partInfo.dataBlocksStart + offset);
 }
 
 bool readPartInfoSectors() {
