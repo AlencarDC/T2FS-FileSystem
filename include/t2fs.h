@@ -3,9 +3,9 @@
 #ifndef __LIBT2FS___
 #define __LIBT2FS___
 #include <stdbool.h>
+#include <string.h>
 
 #define	SECTOR_SIZE	256
-
 #define INIT_BYTE_PART_TABLE 8
 
 #define SECTOR_ERROR -31
@@ -16,6 +16,7 @@
 #define SUCCESS 0
 #define ERROR -1
 
+
 typedef int FILE2;
 typedef int DIR2;
 
@@ -24,6 +25,7 @@ typedef unsigned short int WORD;
 typedef unsigned int DWORD;
 
 #define FILE_NAME_SIZE 31  // Tamanho fixo do nome do arquivo ou diretorio
+
 
 #pragma pack(push, 1)
 /* Informacoes relevantes sobre a particao */
@@ -55,11 +57,21 @@ typedef struct indexBlock {
 
 } INDEX_BLOCK;
 
+typedef struct blockPointer{
+	BYTE valid;
+	DWORD blockPointer;
+}BLOCK_POINTER;
+
 /* Registro de diretorio  */
-#define RECORD_INVALID 0x00 // Entrada do arquivo de diretorio invalida
-#define RECORD_REGULAR 0x01 // Entrada para arquivo regular
-#define RECORD_DIR 0x02 // Entrada para diretorio
-#define RECORD_LINK 0x03 // Entrada para softlinks
+#define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
+#define RECORD_REGULAR 0x01; // Entrada para arquivo regular
+#define RECORD_DIR 0x02; // Entrada para diretorio
+#define RECORD_LINK 0x03; // Entrada para softlinks
+//Informações de ofset em termos de byte  da struct DIR_RECORD.
+//SE MUDAR A STRUCT MUDE OS OFFSETS CORRETAMENTE TAMBÉM
+#define DIR_ENTRY_OFFSET 1
+#define BLOCK_FILE_SIZE_OFFSET DIR_ENTRY_OFFSET + FILE_NAME_SIZE + 1
+#define INDEX_ADDRESS_OFFSET BLOCK_FILE_SIZE_OFFSET + 4
 typedef struct {
 	BYTE type;
 	char name[FILE_NAME_SIZE + 1];

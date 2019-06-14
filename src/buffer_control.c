@@ -19,3 +19,33 @@ DWORD bufferToDWORD(BYTE *buffer, int initialByte) {
     free(value);
     return result;
 }
+
+char bufferToCHAR(BYTE *buffer, int initialByte){
+    return (char) buffer[initialByte];
+}
+
+void bufferToDirEntryName(BYTE *buffer, char *dirEntryName,int initialByte){
+    int i;
+    for(i = 0; i < FILE_NAME_SIZE + 1; i++){
+        dirEntryName[i] = bufferToCHAR(buffer,initialByte+i);
+    }
+}
+
+DIR_RECORD bufferToDIR_RECORD(BYTE *buffer, int initialByte){
+    DIR_RECORD dirExtracted;
+    
+    dirExtracted.type = buffer[initialByte];
+    bufferToDirEntryName(buffer,dirExtracted.name,initialByte + DIR_ENTRY_OFFSET);
+    dirExtracted.blockFileSize = bufferToDWORD(buffer,initialByte + BLOCK_FILE_SIZE_OFFSET);
+    dirExtracted.indexAddress = bufferToDWORD(buffer, initialByte + INDEX_ADDRESS_OFFSET);
+
+    return dirExtracted;
+}
+
+BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte){
+    BLOCK_POINTER blockPointerExtracted;
+    blockPointerExtracted.valid = buffer[initialByte];
+    blockPointerExtracted.blockPointer = bufferToDWORD(buffer,initialByte + 1);
+
+    return blockPointerExtracted;
+}
