@@ -41,22 +41,16 @@ typedef struct{
 /* Registro com as informacoes do superbloco */ 
 typedef struct {
 	char id[4]; // Identifcacao do sistema de arquivos. Ex.: T2FS
-	WORD dataBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de blocos de dados
-	WORD indexBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de arquivos de indice
+	//WORD dataBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de blocos de dados
+	//WORD indexBlockBitmapSize; // Quantidade de blocos para armazenar o bitmap de arquivos de indice
+	WORD bitmapSectorsSize; // Quantidade de setores para armazenar os dois bitmaps;
+	WORD dataBlockAreaSize; // Quantidade de blocos da area de blocos de dado
 	WORD indexBlockAreaSize; // Quantidade de blocos da area de blocos de indice
 	WORD blockSize; // Quantidade de setores de cada bloco
 	DWORD partitionSize; // Quantidade de blocos destiandos a particao do T2FS
 	DWORD numberOfPointers; //Quantidade de ponteiros no bloco de indice
 } SUPERBLOCK;
 
-/* Informação dos endereços iniciais de bitmaps e area de indice e dados */
-/* NAO ESTA EM USO */
-typedef struct {
-	DWORD dataBlock; // Endereco do bloco inicial da area de blocos de dados
-	DWORD dataBitmap; // Endereco do bloco inicial do bitmap de dados
-	DWORD indexBlock; // Endereco do bloco inicial da area de bloco de indices
-	DWORD indexBitmap; // Endereco do bloco inicial do bitmap de indices
-} AREA_ADDRESSES;
 
 /* Estrutura dos blocos de indice */
 typedef struct indexBlock {
