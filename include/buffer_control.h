@@ -16,5 +16,8 @@ void bufferToDirEntryName(BYTE *buffer, char *dirEntryName,int initialByte);
 //Retira um DIR_RECORD de buffer a partir de initialByte
 DIR_RECORD bufferToDIR_RECORD(BYTE *buffer, int initialByte);
 
+//Retira um BLOCK_POINTER de buffer a partir de initialByte.
+BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte);
+
 
 #endif

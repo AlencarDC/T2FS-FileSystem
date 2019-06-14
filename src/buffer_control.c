@@ -41,3 +41,11 @@ DIR_RECORD bufferToDIR_RECORD(BYTE *buffer, int initialByte){
 
     return dirExtracted;
 }
+
+BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte){
+    BLOCK_POINTER blockPointerExtracted;
+    blockPointerExtracted.valid = buffer[initialByte];
+    blockPointerExtracted.blockPointer = bufferToDWORD(buffer,initialByte + 1);
+
+    return blockPointerExtracted;
+}
