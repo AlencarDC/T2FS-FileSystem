@@ -16,8 +16,8 @@
 bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
 
 char *currentPath;	// Caminho corrente do sistema de arquivos
-DWORD currentDirIndexPointer; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
-INDEX_BLOCK *rootDirIndex = NULL; // Bloco de indice da raiz
+DWORD currentDirIndexPointer = -1; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
+DWORD rootDirIndex = -1; // Numero/endereco do Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
 HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
@@ -76,18 +76,33 @@ bool readPartInfoBlocks() {
 
 	if (read_sector(partInfo.firstSectorAddress, sectorBuffer) == 0) {
 		memcpy(&superblock, sectorBuffer, sizeof(SUPERBLOCK));
-		//TODO
-		partInfo.dataBlocksStart = 0;
-		partInfo.indexBlocksStart = 0;
-
-		//Adição do número de ponteiros de indice
+		partInfo.indexBlocksStart = partInfo.firstSectorAddress + superblock.bitmapSectorsSize + 1; // Inicio + bitmap + superbloco
+		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
 		partInfo.numberOfPointers = superblock.numberOfPointers;
-
+		
+		return true;
 	}
 	
 	return false;
 }
 
+bool createRootDir() {
+	// Espera-se que essa funcao seja chamada logo apos uma formatacao
+	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
+	if (rootDirIndex == -1) {
+		DWORD freeIndexBlock = getFreeDataBlock(); // Espera-se que seja 0
+		if (freeIndexBlock == 0) {
+			DWORD freeDataBlock = getFreeDataBlock();
+			
+			//createRecord("..", RECORD_DIR);
+			//createRecord(".", RECORD_DIR);
+
+			return true;
+		}
+		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar");
+	}
+	return false;
+}
 
 void cleanDisk() {
 	int i;
@@ -137,10 +152,18 @@ int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
 		for(j = 0; j < SECTOR_SIZE; j++){
 			block[SECTOR_SIZE*i + j] = sectorBuffer[j];
 		}
-
-		
 	}
+	return SUCCESS;
 
+}
+
+FILE2 getFreeHandle() {
+	int i;
+	for (i = 0; i < MAX_FILE_OPEN; i++) {
+		if (openedFiles[i].free == true)
+			return i;
+	}
+	return ERROR;
 }
 
 int getIndexBlockByPointer(BYTE *indexBlock,DWORD pointer){
@@ -151,8 +174,86 @@ int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer){
 	return getBlockByPointer(dataBlock,pointer,partInfo.dataBlocksStart,partInfo.blockSize);
 }
 
-DIR_RECORD *getRecordByName(char *name) {
-	//TODO
+// WARNING: SE DER CORE DUMPED OLHE ESSA FUNCAO
+char **splitPath(char *name, int *size) {
+  int i = 0, n = 0;
+
+  // Conta ocorrencias
+  while (name[i] != '\0') {
+    if (name[i] == '/')
+        n++;
+    i++;
+  }
+  *size = n;
+
+  i = 0;
+  char **strings;
+  strings = (char**)malloc(sizeof(char)*n);
+  char *substring;
+  char *nameCopy = strdup(name); // Necessaroi para strsep
+  while( (substring = strsep(&nameCopy,"/")) != NULL ) {
+    strings[i] = (char*) malloc(sizeof(char)*FILE_NAME_SIZE);
+    strcpy(strings[i], substring);
+  }
+
+  return strings;
+}
+
+int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
+	BYTE *indexBlock[SECTOR_SIZE * partInfo.blockSize];
+	BYTE *dataBlock[SECTOR_SIZE * partInfo.blockSize];
+	BLOCK_POINTER bufferPointer;
+	DIR_RECORD bufferRecord;
+
+	bool fileFound = false;
+	while (!fileFound) {
+		getIndexBlockByPointer(indexBlock, indexPointer);
+		int indexIterator;
+		// Busca entradas do diretorio
+		for (indexIterator = 0; indexIterator < partInfo.numberOfPointers-1; indexPointer++) {
+			bufferToBLOCK_POINTER(&bufferPointer, indexIterator * sizeof(bufferPointer));
+			if (bufferPointer.valid == 1) {
+				getDataBlockByPointer(&dataBlock, bufferPointer.blockPointer);
+				
+				int i; // Busca nos registros dos blocos de dados
+				for (i = 0; i < (SECTOR_SIZE * partInfo.blockSize / sizeof(DIR_RECORD)); i++) {
+					bufferToDIR_RECORD(&bufferRecord, i * sizeof(bufferRecord));
+					if (strcmp(bufferRecord.name, name) == 0 ) {
+						*record = bufferRecord;
+
+						return SUCCESS;
+					}
+				}
+			}
+		}
+		// Checa se o encadeamento existe
+		bufferToBLOCK_POINTER(&bufferPointer, indexIterator * sizeof(bufferPointer));
+		if (bufferPointer.valid != 1)
+			return ERROR; 
+	}
+}
+
+int getRecordByPath(DIR_RECORD *record, char *path) {
+	DWORD indexPointer;
+	if (path[0] = '/')
+		indexPointer = rootDirIndex;
+	else
+		indexPointer = currentDirIndexPointer;
+
+	int size;
+	char **dirNames = splitPath(path, &size);
+
+	int i;
+	DIR_RECORD buffRecord;
+	for (i = 0; i < size; i++) {
+		if (getRecordByName(&buffRecord, indexPointer, dirNames[i]) == SUCCESS)
+			indexPointer = buffRecord.indexAddress;
+		else
+			return ERROR;
+	}
+	// Encontrou o record que precisava
+	*record = buffRecord;
+	return SUCCESS;
 }
 
 bool initPartInfo() {
@@ -160,12 +261,13 @@ bool initPartInfo() {
 }
 
 bool initRootDir() {
-	//TODOOTODODTODOTODO MATHEUS
-	rootDirIndex = getIndexBlockByPointer(0,0);
-	
-	if (rootDirIndex != NULL)
+	if (getBitmap(BITMAP_INDEX, 0)) {
+		currentPath = "/";
+		currentDirIndexPointer = 0;
+		rootDirIndex = 0;
 		return true;
-	
+	}
+
 	return false;
 }
 
@@ -174,19 +276,17 @@ bool init() {
 		int i;
 		for (i = 0; i < MAX_FILE_OPEN; i++) {
 			openedFiles[i].free = true;
-			//...
+			//... WARNING deve inicializar os outros campos tambem?
 		}
 
 		currentPath = "/";
-		//currentRecord = getRecordByName("."); // Nao sei pq o matheus removeu essa variavel. Dps eu pergunto
+		
 
 		initialized = true;
 	}
 
 	return false;
 }
-
-int findEmptyEntry(BYTE *indexBlock, BYTE *dataBlockBuffer, DWORD &blockPointer, int &initialByte);
 
 
 FILE2 createRecord(char *filename, int type) {
@@ -290,7 +390,10 @@ int format2 (int sectors_per_block) {
 		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
 		partInfo.numberOfPointers = superblock.numberOfPointers;
 		_printPartInfo();
-
+		
+		createRootDir();
+		
+		initialized = true;
 		return SUCCESS;
 	}
 	return ERROR;
@@ -327,6 +430,24 @@ FILE2 open2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	FILE2 handle = getFreeHandle();
+	if (handle != -1 && strlen(filename) > 0) {
+		DIR_RECORD dirRecord;
+		if (getRecordByPath(&dirRecord, filename) == SUCCESS) {
+			// checar se o arquivo é FILE ou LINK
+			if (dirRecord.type == RECORD_LINK || dirRecord.type == RECORD_REGULAR) {
+				openedFiles[handle].free = false;
+				openedFiles[handle].path = filename;
+				openedFiles[handle].record = dirRecord;
+				openedFiles[handle].pointer = 0;
+
+				return handle;
+			}
+		}
+
+	}
+
+	printf("ERRO: O arquivo nao foi encontrado!\n");
 	return ERROR;
 }
 

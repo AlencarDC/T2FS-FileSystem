@@ -51,22 +51,16 @@ typedef struct {
 	DWORD numberOfPointers; //Quantidade de ponteiros no bloco de indice
 } SUPERBLOCK;
 
-
-/* Estrutura dos blocos de indice */
-typedef struct indexBlock {
-
-} INDEX_BLOCK;
-
 typedef struct blockPointer{
 	BYTE valid;
 	DWORD blockPointer;
-}BLOCK_POINTER;
+} BLOCK_POINTER;
 
 /* Registro de diretorio  */
-#define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
-#define RECORD_REGULAR 0x01; // Entrada para arquivo regular
-#define RECORD_DIR 0x02; // Entrada para diretorio
-#define RECORD_LINK 0x03; // Entrada para softlinks
+#define RECORD_INVALID 0x00 // Entrada do arquivo de diretorio invalida
+#define RECORD_REGULAR 0x01 // Entrada para arquivo regular
+#define RECORD_DIR 0x02 // Entrada para diretorio
+#define RECORD_LINK 0x03 // Entrada para softlinks
 //Informações de ofset em termos de byte  da struct DIR_RECORD.
 //SE MUDAR A STRUCT MUDE OS OFFSETS CORRETAMENTE TAMBÉM
 #define DIR_ENTRY_OFFSET 1
@@ -114,12 +108,11 @@ void cleanDisk();
 // Realiza os calculos para preencer as informacoes da estrutura de superbloco e retorna-la
 SUPERBLOCK createSuperblock(int sectorsPerBlock);
 
-// Retorna o bloco de indice dado pelo numero passado.
-// 		offset -> deslocamento a partir do primeiro bloco de indice
-INDEX_BLOCK *getIndexBlockByNumber(DWORD offset);
+// Retorna registor do diretorio dado seu nome e bloco de indice a ser pesquiasdo
+int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name);
 
-// Retorna registor do diretorio dado seu nome
-DIR_RECORD *getRecordByName(char *name);
+// Retorna o registro de diretorio apontado pelo pelo path
+int getRecordByPath(DIR_RECORD *record, char *path);
 
 // Inicializa a estrutura de partInfo, faz uma chamada para readPartInfoSectors() e para readpartInfoBlocks();
 bool initPartInfo();
