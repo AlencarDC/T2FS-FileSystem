@@ -352,8 +352,12 @@ Função:	Função usada para fechar um arquivo.
 int close2 (FILE2 handle) {
 	if (initialized == false && init() == false)
 		return ERROR;
+	
+	if (handle >= MAX_FILE_OPEN || handle < 0)
+		return ERROR;
 
-	return ERROR;
+	openedFiles[handle].free = true;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
@@ -400,6 +404,14 @@ Função:	Altera o contador de posição (current pointer) do arquivo.
 int seek2 (FILE2 handle, DWORD offset) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	if(handle >= MAX_FILE_OPEN || handle < 0)
+		return ERROR;
+
+	if(openedFiles[handle].free == true)
+		return ERROR;
+	
+	openedFiles[handle].pointer = offset;
 
 	return ERROR;
 }
