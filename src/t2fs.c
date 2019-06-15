@@ -22,6 +22,8 @@ DWORD rootDirIndex = -1; // Numero/endereco do Bloco de indice da raiz
 
 PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
 HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
+HANDLER openedDirs[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos diretorios abertos
+
 
 void _printSuperblock(SUPERBLOCK superblock) {
 	printf("\n\nSUPERBLOCK:\n");
@@ -157,10 +159,19 @@ int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
 
 }
 
-FILE2 getFreeHandle() {
+FILE2 getFreeFileHandle() {
 	int i;
 	for (i = 0; i < MAX_FILE_OPEN; i++) {
 		if (openedFiles[i].free == true)
+			return i;
+	}
+	return ERROR;
+}
+
+DIR2 getFreeDirHandle() {
+	int i;
+	for (i = 0; i < MAX_FILE_OPEN; i++) {
+		if (openedDirs[i].free == true)
 			return i;
 	}
 	return ERROR;
@@ -256,6 +267,70 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 	// Encontrou o record que precisava
 	*record = buffRecord;
 	return SUCCESS;
+}
+
+DWORD getNextDirRecordValid(DWORD indexPointer, DWORD recordPointer) {
+	BYTE indexBlock[SECTOR_SIZE * partInfo.blockSize];
+	BYTE dataBlock[SECTOR_SIZE * partInfo.blockSize];
+	BLOCK_POINTER bufferPointer;
+	DIR_RECORD bufferRecord;
+
+	DWORD numberOfRecordsPerDataBlock = (SECTOR_SIZE * partInfo.blockSize) / sizeof(DIR_RECORD);  
+	DWORD dataBlockNumber = recordPointer / numberOfRecordsPerDataBlock;
+	// numero do bloco de indice que armazena o bloco de dados que contem o registro apontado por recordPointer
+	DWORD indexBlockNumber = (dataBlockNumber / (partInfo.numberOfPointers - 1)); 
+
+	// Pegar o ponteiro do bloco de indice que o record esta
+	int i;
+	for (i = 0; i < indexBlockNumber; i++) {
+		getIndexBlockByPointer(indexBlock, indexPointer);
+		bufferPointer = bufferToBLOCK_POINTER(indexBlock, partInfo.numberOfPointers * sizeof(bufferPointer));
+		if (bufferPointer.valid != INVALID_BLOCK_PTR)
+			indexPointer = bufferPointer.blockPointer;
+		else
+			return ERROR;
+	}
+	//Pegar bloco de indice e endereco pro bloco de dados que esta o registro
+	getIndexBlockByPointer(indexBlock, indexPointer);
+	DWORD dataBlockPointer = dataBlockNumber % partInfo.numberOfPointers; 	// Nessa conta tem o -1 na numberOfPointer Ou nao??
+	bufferPointer = bufferToBLOCK_POINTER(indexBlock, dataBlockPointer * sizeof(bufferPointer));
+	if (bufferPointer.blockPointer == INVALID_BLOCK_PTR)
+		return ERROR;
+
+	bool dirRecordNotFound = true;
+	int recordIterator;
+	// Buscar pelos blocos de indice encadeados atras do registro valido
+	do {
+		// Pega o bloco de dados da busca atual e procura pelo registro valido dentro
+		getDataBlockByPointer(dataBlock, bufferPointer.blockPointer);
+		for (recordIterator = recordPointer; recordIterator < numberOfRecordsPerDataBlock; recordIterator++) {
+			bufferRecord = bufferToDIR_RECORD(dataBlock, recordIterator * sizeof(bufferRecord));
+			if (bufferRecord.type == RECORD_DIR) {
+				// Achou o registro valido, calcula o seu numero equivalente
+				return (recordIterator + numberOfRecordsPerDataBlock * (dataBlockNumber-1));
+			}
+		}
+		// Nao esta nesse bloco, pegar o proximo
+		DWORD insideBlockPointerNumber = (dataBlockNumber % partInfo.numberOfPointers); // Vai -1?
+		if ( insideBlockPointerNumber == (partInfo.numberOfPointers-1)) {
+			// Eh o ultimo bloco de dados do bloco de indice precisamos pegar o proximo bloco de indices
+			bufferPointer = bufferToBLOCK_POINTER(indexBlock, partInfo.numberOfPointers * sizeof(bufferPointer));
+			if (bufferPointer.valid == INVALID_BLOCK_PTR) // O encadeamento terminou e nao ha proximo registro valido 
+				return ERROR;
+			getIndexBlockByPointer(indexBlock, bufferPointer.blockPointer);
+			bufferPointer = bufferToBLOCK_POINTER(indexBlock, 0); // Primeiro bloco de dados
+			if (bufferPointer.valid == INVALID_BLOCK_PTR)	// O bloco de dados nao seguinte nao eh valido, ou seja a busca terminou
+				return ERROR;
+		} else {
+			// Pegar apenas o proximo bloco de dados dentro do bloco de indice atuaul
+			bufferPointer = bufferToBLOCK_POINTER(indexBlock, insideBlockPointerNumber + 1);
+		}
+
+		dataBlockNumber++; // aumentar o numero do bloco de dados desse diretorio. Numero total, por exemplo diretorio utiliza 34 blocos de dados
+	} while (dirRecordNotFound);
+
+	
+	return ERROR;
 }
 
 bool initPartInfo() {
@@ -525,9 +600,10 @@ FILE2 open2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	FILE2 handle = getFreeHandle();
+	FILE2 handle = getFreeFileHandle();
 	if (handle != -1 && strlen(filename) > 0) {
 		DIR_RECORD dirRecord;
+		// Busca o registro do arquivos seguindo pelo seu path
 		if (getRecordByPath(&dirRecord, filename) == SUCCESS) {
 			// checar se o arquivo é FILE ou LINK
 			if (dirRecord.type == RECORD_LINK || dirRecord.type == RECORD_REGULAR) {
@@ -640,6 +716,7 @@ Função:	Função usada para alterar o CP (current path)
 int chdir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
+		
 
 	return ERROR;
 }
@@ -651,6 +728,11 @@ int getcwd2 (char *pathname, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	if (strlen(currentPath) <= size) {
+		strcpy(pathname, currentPath);
+		return SUCCESS;
+	}
+
 	return ERROR;
 }
 
@@ -661,6 +743,25 @@ DIR2 opendir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	DIR2 handle = getFreeDirHandle();
+	if (handle != -1 && strlen(pathname) > 0) {
+		DIR_RECORD dirRecord;
+		// Busca o registro do diretorio seguindo pelo seu path
+		if (getRecordByPath(&dirRecord, pathname) == SUCCESS) {
+			// checar se o arquivo é DIR
+			if (dirRecord.type == RECORD_DIR) {
+				openedFiles[handle].free = false;
+				openedFiles[handle].path = pathname;
+				openedFiles[handle].record = dirRecord;
+				openedFiles[handle].pointer = getNextDirRecordValid(dirRecord.indexAddress, 0);
+
+				return handle;
+			}
+		}
+
+	}
+
+	printf("ERRO: O diretorio nao foi encontrado!\n");
 	return ERROR;
 }
 
