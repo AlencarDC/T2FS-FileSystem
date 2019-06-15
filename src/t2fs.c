@@ -247,7 +247,7 @@ DIR_RECORD createRecord(char *filename, int type) {
 			getIndexBlockByPointer(indexBlockBuffer,ptrToIndexBlock.blockPointer);
 		
 	}
-	return -1;
+	return newRecord;
 }
 
 bool isOpened(FILE2 handle) {
