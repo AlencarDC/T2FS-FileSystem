@@ -49,3 +49,11 @@ BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte){
 
     return blockPointerExtracted;
 }
+
+int insertDirEntryAt(BYTE *buffer, DIR_RECORD toInsert, int index) {
+    BYTE *pointer;
+    // Pega ponteiro para o local onde ve ser inserido
+    pointer = buffer + index * sizeof(toInsert);
+    // Copia para o buffer o registro pedido na posicao de pointer
+    memcpy(pointer, &toInsert, sizeof(toInsert));
+}

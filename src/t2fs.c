@@ -269,7 +269,9 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 	return SUCCESS;
 }
 
-DWORD getNextDirRecordValid(DWORD indexPointer, DWORD recordPointer) {
+
+// WARNING TODO: desalacar (free) buffers
+DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD recordPointer) {
 	BYTE indexBlock[SECTOR_SIZE * partInfo.blockSize];
 	BYTE dataBlock[SECTOR_SIZE * partInfo.blockSize];
 	BLOCK_POINTER bufferPointer;
@@ -307,6 +309,7 @@ DWORD getNextDirRecordValid(DWORD indexPointer, DWORD recordPointer) {
 			bufferRecord = bufferToDIR_RECORD(dataBlock, recordIterator * sizeof(bufferRecord));
 			if (bufferRecord.type == RECORD_DIR) {
 				// Achou o registro valido, calcula o seu numero equivalente
+				*record = bufferRecord;
 				return (recordIterator + numberOfRecordsPerDataBlock * (dataBlockNumber-1));
 			}
 		}
@@ -427,12 +430,15 @@ DIR_RECORD createRecord(char *filename, int type) {
 	return newRecord;
 }
 
-bool isOpened(FILE2 handle) {
-	return (handle >= 0 && openedFiles[handle].free == false && handle < MAX_FILE_OPEN);
-}
+bool isFileOpened(FILE2 handle) {
+	return (handle >= 0 && openedFiles[handle].free == false);
 
 bool readIsWithinBoundary(HANDLER toCheck, int size){
 	return (toCheck.pointer + size - 1 < toCheck.record.byteFileSize);
+}
+
+bool isDirOpened(DIR2 handle) {
+	return (handle >= 0 && openedDirs[handle].free == false);
 }
 
 
@@ -447,7 +453,7 @@ int readFile(FILE2 handle, BYTE *buffer, int size){
 	DWORD nBytesRead = 0;
 	int i;
 
-	if(isOpened(handle)){
+	if(isFileOpened(handle)){
 		archiveToRead = openedFiles[handle];
 		//Caso o tamanho da leitura vá passar do tamanho do arquivo
 		if(archiveToRead.pointer + size > archiveToRead.record.byteFileSize){
@@ -644,7 +650,7 @@ int read2 (FILE2 handle, char *buffer, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	if (isOpened(handle) == true) 
+	if (isFileOpened(handle) == true) 
 		return readFile(handle, buffer, size);
 	return ERROR;
 }
@@ -746,6 +752,7 @@ DIR2 opendir2 (char *pathname) {
 	DIR2 handle = getFreeDirHandle();
 	if (handle != -1 && strlen(pathname) > 0) {
 		DIR_RECORD dirRecord;
+		DIR_RECORD buffer;
 		// Busca o registro do diretorio seguindo pelo seu path
 		if (getRecordByPath(&dirRecord, pathname) == SUCCESS) {
 			// checar se o arquivo é DIR
@@ -753,7 +760,7 @@ DIR2 opendir2 (char *pathname) {
 				openedFiles[handle].free = false;
 				openedFiles[handle].path = pathname;
 				openedFiles[handle].record = dirRecord;
-				openedFiles[handle].pointer = getNextDirRecordValid(dirRecord.indexAddress, 0);
+				openedFiles[handle].pointer = getNextDirRecordValid(&buffer, dirRecord.indexAddress, 0);
 
 				return handle;
 			}
@@ -771,6 +778,25 @@ Função:	Função usada para ler as entradas de um diretório.
 int readdir2 (DIR2 handle, DIRENT2 *dentry) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	if (isDirOpened(handle) == true) {
+		DIR_RECORD record;
+		DWORD newPointer = getNextDirRecordValid(&record, openedDirs[handle].record.indexAddress, openedDirs[handle].pointer);
+		if (newPointer == ERROR) {
+			dentry = NULL;
+			return ERROR;
+		}
+		strcpy((*dentry).name, record.name);
+		(*dentry).fileSize = record.byteFileSize;
+		if (record.type == RECORD_DIR)
+			(*dentry).fileType = RECORD_DIR;
+		else if (record.type == RECORD_LINK || record.type == RECORD_REGULAR)
+			(*dentry).fileType = RECORD_REGULAR;
+		else 
+			return ERROR;
+		
+		return SUCCESS;
+	}
 
 	return ERROR;
 }
