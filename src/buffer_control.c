@@ -36,7 +36,7 @@ DIR_RECORD bufferToDIR_RECORD(BYTE *buffer, int initialByte){
     
     dirExtracted.type = buffer[initialByte];
     bufferToDirEntryName(buffer,dirExtracted.name,initialByte + DIR_ENTRY_OFFSET);
-    dirExtracted.blockFileSize = bufferToDWORD(buffer,initialByte + BLOCK_FILE_SIZE_OFFSET);
+    dirExtracted.byteFileSize = bufferToDWORD(buffer,initialByte + BLOCK_FILE_SIZE_OFFSET);
     dirExtracted.indexAddress = bufferToDWORD(buffer, initialByte + INDEX_ADDRESS_OFFSET);
 
     return dirExtracted;

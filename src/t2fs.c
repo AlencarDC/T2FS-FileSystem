@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "../include/t2fs.h"
 #include "../include/bitmap.h"
 #include "../include/apidisk.h"
@@ -58,7 +59,6 @@ DWORD getFreeDataBlock() {
 }
 
 bool readPartInfoSectors() {
-	BYTE buffer[sizeof(DWORD)];
 	BYTE bufferSector[SECTOR_SIZE];
 
 	if (read_sector(0, bufferSector) == 0) {
@@ -200,8 +200,8 @@ char **splitPath(char *name, int *size) {
 }
 
 int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
-	BYTE *indexBlock[SECTOR_SIZE * partInfo.blockSize];
-	BYTE *dataBlock[SECTOR_SIZE * partInfo.blockSize];
+	BYTE indexBlock[SECTOR_SIZE * partInfo.blockSize];
+	BYTE dataBlock[SECTOR_SIZE * partInfo.blockSize];
 	BLOCK_POINTER bufferPointer;
 	DIR_RECORD bufferRecord;
 
@@ -211,13 +211,13 @@ int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
 		int indexIterator;
 		// Busca entradas do diretorio
 		for (indexIterator = 0; indexIterator < partInfo.numberOfPointers-1; indexPointer++) {
-			bufferToBLOCK_POINTER(&bufferPointer, indexIterator * sizeof(bufferPointer));
-			if (bufferPointer.valid == 1) {
-				getDataBlockByPointer(&dataBlock, bufferPointer.blockPointer);
+			bufferPointer = bufferToBLOCK_POINTER(indexBlock, indexIterator * sizeof(bufferPointer));
+			if (bufferPointer.valid != INVALID_BLOCK_PTR) {
+				getDataBlockByPointer(dataBlock, bufferPointer.blockPointer);
 				
 				int i; // Busca nos registros dos blocos de dados
 				for (i = 0; i < (SECTOR_SIZE * partInfo.blockSize / sizeof(DIR_RECORD)); i++) {
-					bufferToDIR_RECORD(&bufferRecord, i * sizeof(bufferRecord));
+					bufferRecord = bufferToDIR_RECORD(dataBlock, i * sizeof(bufferRecord));
 					if (strcmp(bufferRecord.name, name) == 0 ) {
 						*record = bufferRecord;
 
@@ -227,15 +227,17 @@ int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
 			}
 		}
 		// Checa se o encadeamento existe
-		bufferToBLOCK_POINTER(&bufferPointer, indexIterator * sizeof(bufferPointer));
-		if (bufferPointer.valid != 1)
+		bufferPointer = bufferToBLOCK_POINTER(indexBlock, indexIterator * sizeof(bufferPointer));
+		if (bufferPointer.valid == INVALID_BLOCK_PTR)
 			return ERROR; 
 	}
+
+	return ERROR;
 }
 
 int getRecordByPath(DIR_RECORD *record, char *path) {
 	DWORD indexPointer;
-	if (path[0] = '/')
+	if (path[0] == '/')
 		indexPointer = rootDirIndex;
 	else
 		indexPointer = currentDirIndexPointer;
@@ -295,7 +297,7 @@ DIR_RECORD createRecord(char *filename, int type) {
 	int indexIterator, i, dirIterator;
 	BLOCK_POINTER extractedPtr;
 	BLOCK_POINTER ptrToIndexBlock;
-	bool findInvalidEntry = false;
+	bool findEmptyEntry = false;
 
 	//Buffers para fetch de bloco de indice e bloco de dados
 	BYTE *indexBlockBuffer = malloc(blockSizeInBytes);
@@ -428,7 +430,7 @@ FILE2 create2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	return createRecord(filename, RECORD_REGULAR);
+	return -1;//createRecord(filename, RECORD_REGULAR);
 }
 
 /*-----------------------------------------------------------------------------
@@ -492,7 +494,7 @@ int read2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if (isOpened(handle) == true) 
-		if (readFile(handle, buffer, size) == 0)
+		if (readFile(handle, (BYTE *)buffer, size) == 0)
 			return SUCCESS;
 
 	return ERROR;
