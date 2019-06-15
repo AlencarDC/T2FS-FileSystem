@@ -289,14 +289,13 @@ bool init() {
 }
 
 
-FILE2 createRecord(char *filename, int type) {
-	
+DIR_RECORD createRecord(char *filename, int type) {
 	DWORD indexBlockPointer = currentDirIndexPointer;
 	int blockSizeInBytes = SECTOR_SIZE * partInfo.blockSize *sizeof(BYTE);
-	int indexIterator, i;
-	DWORD extractedPointer;
-
-	int numberOfDirRecords = sizeof(DIR_RECORD) / partInfo.blockSize * SECTOR_SIZE;
+	int indexIterator, i, dirIterator;
+	BLOCK_POINTER extractedPtr;
+	BLOCK_POINTER ptrToIndexBlock;
+	bool findInvalidEntry = false;
 
 	//Buffers para fetch de bloco de indice e bloco de dados
 	BYTE *indexBlockBuffer = malloc(blockSizeInBytes);
@@ -311,27 +310,44 @@ FILE2 createRecord(char *filename, int type) {
 	
 	//Fetch do bloco de indices do diretorio corrente
 	getIndexBlockByPointer(indexBlockBuffer,indexBlockPointer);
+	int numberOfDirRecords = partInfo.blockSize * SECTOR_SIZE / sizeof(DIR_RECORD);
+	
+	while(!findEmptyEntry){
+		for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
+			extractedPtr = bufferToBLOCK_POINTER(indexBlockBuffer,indexIterator * sizeof(BLOCK_POINTER));
 
-	for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
-		extractedPointer = bufferToDWORD(indexBlockBuffer,indexIterator * sizeof(DWORD));
-
-		if(extractedPointer == NULL_INDEX_POINTER){
-			//aloca bloco de dados
-			//aponta para bloco de dados
-			//escreve newRecord no inicio
-			//retorna
+			if((char)extractedPtr.valid == INVALID_BLOCK_PTR){
+				//TODO:aloca bloco de dados
+				//aponta para bloco de dados
+				//escreve newRecord no inicio
+				//retorna
+			}
+			else{
+				getDataBlockByPointer(dataBlockBuffer,extractedPtr.blockPointer);
+				DIR_RECORD fetchedEntry;
+				//Percorre as entradas de diretório no bloco
+				for (dirIterator = 0; dirIterator < numberOfDirRecords; dirIterator++){
+					fetchedEntry = bufferToDIR_RECORD(dataBlockBuffer, dirIterator * sizeof(DIR_RECORD));
+					if(fetchedEntry.type == RECORD_INVALID){
+						//TODO:Escreve modificações no bloco
+						//Escreve no disco
+						//retorna
+					}
+				}
+			}
 		}
-		else{
-			getDataBlockByPointer(dataBlockBuffer,extractedPointer);
-			//Percorre as entadas de diretório no bloco
+		BLOCK_POINTER ptrToIndexBlock = bufferToBLOCK_POINTER(indexBlockBuffer,(partInfo.numberOfPointers - 1)* sizeof(BLOCK_POINTER));
+		if(ptrToIndexBlock.valid == INVALID_BLOCK_PTR){
+			//Aloca bloco de indices
+			//Faz bloco antigo apontar para o novo
+			DWORD newPtrIndexBlock = 0; //alocado acima
+			getIndexBlockByPointer(indexBlockBuffer,newPtrIndexBlock);
 		}
+		else
+			getIndexBlockByPointer(indexBlockBuffer,ptrToIndexBlock.blockPointer);
+		
 	}
-
-
-	
-
-	
-	return -1;
+	return newRecord;
 }
 
 bool isOpened(FILE2 handle) {
@@ -457,8 +473,12 @@ Função:	Função usada para fechar um arquivo.
 int close2 (FILE2 handle) {
 	if (initialized == false && init() == false)
 		return ERROR;
+	
+	if (handle >= MAX_FILE_OPEN || handle < 0)
+		return ERROR;
 
-	return ERROR;
+	openedFiles[handle].free = true;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
@@ -505,6 +525,14 @@ Função:	Altera o contador de posição (current pointer) do arquivo.
 int seek2 (FILE2 handle, DWORD offset) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	if(handle >= MAX_FILE_OPEN || handle < 0)
+		return ERROR;
+
+	if(openedFiles[handle].free == true)
+		return ERROR;
+	
+	openedFiles[handle].pointer = offset;
 
 	return ERROR;
 }

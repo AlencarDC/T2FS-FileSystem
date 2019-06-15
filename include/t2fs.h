@@ -8,6 +8,7 @@
 #define	SECTOR_SIZE	256
 #define INIT_BYTE_PART_TABLE 8
 
+#define INVALID_BLOCK_PTR '\0'
 #define SECTOR_ERROR -31
 #define	INVALID_PTR	-1
 #define NULL_INDEX_POINTER 0
@@ -124,7 +125,7 @@ bool initRootDir();
 bool init();
 
 // Realiza a criacao de um novo record/registro no diretorio corrente
-FILE2 createRecord(char *filename, int type);
+DIR_RECORD createRecord(char *filename, int type);
 
 //Armazena em block o bloco apontado em pointer dado o offset de inicio da área de blocos usadae tamanho do bloco.
 int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize);
