@@ -136,6 +136,8 @@ int getIndexBlockByPointer(BYTE *indexBlock,DWORD pointer);
 //Armazena em dataBlock o bloco de dados apontado por pointer
 int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer);
 
+//Checa se a operação de leitura está dentro do tamanho do arquivo
+bool readIsWithinBoundary(HANDLER toCheck, int size);
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
