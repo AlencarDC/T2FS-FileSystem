@@ -609,9 +609,12 @@ int seek2 (FILE2 handle, DWORD offset) {
 	if(openedFiles[handle].free == true)
 		return ERROR;
 	
-	openedFiles[handle].pointer = offset;
+	if(offset >= 0)
+		openedFiles[handle].pointer = offset;
+	else //Offset < 0 (Posiciona no fim do aquivo conforme especificação.);
+		openedFiles[handle].pointer = openedFiles[handle].record.byteFileSize;
 
-	return ERROR;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
