@@ -353,15 +353,90 @@ DIR_RECORD createRecord(char *filename, int type) {
 }
 
 bool isOpened(FILE2 handle) {
-	return (handle >= 0 && openedFiles[handle].free == false);
+	return (handle >= 0 && openedFiles[handle].free == false && handle < MAX_FILE_OPEN);
+}
+
+bool readIsWithinBoundary(HANDLER toCheck, int size){
+	return (toCheck.pointer + size - 1 < toCheck.record.byteFileSize)
 }
 
 
 int readFile(FILE2 handle, BYTE *buffer, int size){
-	if(isOpened(handle))
-		return ERROR;
+	bool readDone = false;
+	BYTE *bufferDataBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	BYTE *bufferIndexBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	HANDLER archiveToRead;
+	DWORD logicBlockToRead;
+	DWORD bufferPointer = 0;
+	DWORD offsetInBlock;
+	DWORD nBytesRead = 0;
+	int i;
 
-	
+	if(isOpened(handle)){
+		archiveToRead = openedFiles[handle];
+		//Caso o tamanho da leitura vá passar do tamanho do arquivo
+		if(archiveToRead.pointer + size > archiveToRead.record.byteFileSize){
+			size = archiveToRead.record.byteFileSize - archiveToRead.pointer;
+		}
+		//Fetch do bloco de indice (começa em 0)
+		DWORD currentIndexLevel = 0; 
+		getIndexBlockByPointer(bufferIndexBlock,archiveToRead.record.indexAddress);
+		while(!readDone){
+			//Posiciona num bloco logico o ponteiro
+			logicBlockToRead = archiveToRead.pointer / partInfo.blockSize * SECTOR_SIZE;
+			//Determina o offset dentro do bloco logico acima
+			offsetInBlock = archiveToRead.pointer % partInfo.blockSize * SECTOR_SIZE;
+			//Calcula o nível de indice necessário
+			DWORD indexLevelNeeded = logicBlockToRead / partInfo.numberOfPointers - 1;
+			//Caso o nível de indice necessario para acessar seja maior que o nível acessado
+			if(indexLevelNeeded > currentIndexLevel){
+				//Itera sobre os níveis de indice até achar o correto
+				while (currentIndexLevel < indexLevelNeeded){
+					currentIndexLevel++;
+					DWORD nextIndex = bufferToBLOCK_POINTER(bufferIndexBlock, (partInfo.numberOfPointers - 1) * sizeof(BLOCK_POINTER)).blockPointer;
+					getIndexBlockByPointer(bufferIndexBlock,nextIndex);
+				}
+			}
+			//Tradução do bloco lógico para físico
+			DWORD realBlockToRead = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) *logicBlockToRead).blockPointer;
+			//Leitura do bloco físico
+			getDataBlockByPointer(bufferDataBlock,realBlockToRead);
+			//Calculo do número de bytes que conseguimos ler desse bloco
+			DWORD remainingBytes = partInfo.blockSize * SECTOR_SIZE - offsetInBlock + 1;
+			//Caso seja >= size então a leitura acabou
+			if(remainingBytes >= size){
+				nBytesRead+= size;//Conseguiu ler size bytes
+				readDone = true;
+				//Copia os dados pro buffer
+				for(i = 0; i < size; i++){
+					buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
+				}
+				archiveToRead.pointer += size;//Posiciona ponteiro para proximo byte apos leitura
+			}
+			else{//remaining_bytes < size
+				nBytesRead += remainingBytes;
+				readDone = false;
+				//Copia dados pro buffer
+				for(i = 0; i < remainingBytes; i++){
+					buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
+				}
+				bufferPointer += remainingBytes; //Reposiciona bufferPointer
+				archiveToRead.pointer += remainingBytes; //Reposiciona pointer do arquivo para o proximo dado a ser lido.
+				size -= remainingBytes; //Tamanho a ser lido diminuido do que foi lido
+			}
+
+		}
+		free(bufferIndexBlock);
+		free(bufferDataBlock);
+		openedFiles[handle] = archiveToRead;	//Atualiza o handle
+		return nBytesRead;
+		
+	}
+	else{
+		free(bufferIndexBlock);
+		free(bufferDataBlock);
+		return ERROR;	
+	}
 }
 
 /********************************************************************************/
