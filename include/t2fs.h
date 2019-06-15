@@ -8,6 +8,7 @@
 #define	SECTOR_SIZE	256
 #define INIT_BYTE_PART_TABLE 8
 
+#define INVALID_BLOCK_PTR '\0'
 #define SECTOR_ERROR -31
 #define	INVALID_PTR	-1
 #define NULL_INDEX_POINTER 0
@@ -63,10 +64,10 @@ typedef struct blockPointer{
 }BLOCK_POINTER;
 
 /* Registro de diretorio  */
-#define RECORD_INVALID 0x00; // Entrada do arquivo de diretorio invalida
-#define RECORD_REGULAR 0x01; // Entrada para arquivo regular
-#define RECORD_DIR 0x02; // Entrada para diretorio
-#define RECORD_LINK 0x03; // Entrada para softlinks
+#define RECORD_INVALID 0x00// Entrada do arquivo de diretorio invalida
+#define RECORD_REGULAR 0x01 // Entrada para arquivo regular
+#define RECORD_DIR 0x02// Entrada para diretorio
+#define RECORD_LINK 0x03 // Entrada para softlinks
 //Informações de ofset em termos de byte  da struct DIR_RECORD.
 //SE MUDAR A STRUCT MUDE OS OFFSETS CORRETAMENTE TAMBÉM
 #define DIR_ENTRY_OFFSET 1
@@ -131,7 +132,7 @@ bool initRootDir();
 bool init();
 
 // Realiza a criacao de um novo record/registro no diretorio corrente
-FILE2 createRecord(char *filename, int type);
+DIR_RECORD createRecord(char *filename, int type);
 
 //Armazena em block o bloco apontado em pointer dado o offset de inicio da área de blocos usadae tamanho do bloco.
 int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize);
