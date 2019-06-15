@@ -22,5 +22,7 @@ DIR_RECORD bufferToDIR_RECORD(BYTE *buffer, int initialByte);
 //Retira um BLOCK_POINTER de buffer a partir de initialByte.
 BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte);
 
+// Insere um dir_record no bloco de dados de diretorio passado como parametro na posicao dada pelo index
+int insertDirEntryAt(BYTE *buffer, DIR_RECORD toInsert, int index);
 
 #endif
