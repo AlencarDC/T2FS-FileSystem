@@ -357,7 +357,7 @@ bool isOpened(FILE2 handle) {
 }
 
 bool readIsWithinBoundary(HANDLER toCheck, int size){
-	return (toCheck.pointer + size - 1 < toCheck.record.byteFileSize)
+	return (toCheck.pointer + size - 1 < toCheck.record.byteFileSize);
 }
 
 
@@ -569,9 +569,7 @@ int read2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if (isOpened(handle) == true) 
-		if (readFile(handle, (BYTE *)buffer, size) == 0)
-			return SUCCESS;
-
+		return readFile(handle, buffer, size);
 	return ERROR;
 }
 
