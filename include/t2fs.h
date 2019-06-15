@@ -76,7 +76,7 @@ typedef struct blockPointer{
 typedef struct {
 	BYTE type;
 	char name[FILE_NAME_SIZE + 1];
-	DWORD blockFileSize;
+	DWORD byteFileSize;
 	DWORD indexAddress;
 } DIR_RECORD;
 

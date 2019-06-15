@@ -203,7 +203,7 @@ DIR_RECORD createRecord(char *filename, int type) {
 
 	//Record a ser registrado 
 	DIR_RECORD newRecord;
-	newRecord.blockFileSize = 0;
+	newRecord.byteFileSize = 0;
 	strcpy(newRecord.name,filename);
 	newRecord.type = type;
 	//TODO:Alocar bloco de indices e bloco de dados consistentes pro arquivo
@@ -251,13 +251,15 @@ DIR_RECORD createRecord(char *filename, int type) {
 }
 
 bool isOpened(FILE2 handle) {
-	return (handle >= 0 && openedFiles[handle].free == true);
+	return (handle >= 0 && openedFiles[handle].free == false);
 }
 
 
 int readFile(FILE2 handle, BYTE *buffer, int size){
-	int i;
+	if(isOpened(handle))
+		return ERROR;
 
+	
 }
 
 /********************************************************************************/
