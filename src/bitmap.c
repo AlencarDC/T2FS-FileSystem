@@ -1,11 +1,13 @@
+#include "../include/apidisk.h"
+
 #define INODE_TYPE 0
 #define DATA_TYPE 1
 
-
-typedef *WORD TBitmapVector;
+//vou mover as estruturas pra .h depois
+typedef *BYTE TBitmapVector;
 
 typedef struct{
-  int nElements_bytes;  //given the bits needed to record the info, more bytes may be used.
+  int nElements_bits;  //given the bits needed to record the info, more bytes may be used.
   //nElements_bytes = size_bits/8 + (size_bits mod 8 > 1 ? 1:0);
   TBitmapVector bitmapVector;
 } TBitmapDescriptor;
@@ -13,13 +15,31 @@ typedef struct{
 TBitmapDescriptor dBitmapIndexVector;
 TBitmapDescriptor dBitmapDataVector;
 
+typedef struct{
+  int bitmap_start;
+  int tamanho_index;
+  int tamanho_bitmap;
+  int tamanho_data;
+} TBitmap;
 
-int createDBitmapVector(TBitmapDescriptor dBitmapVector, WORD size_bits){
-  WORD nElements_bytes = size_bits/8 + (size_bits%8 > 1 ? 1:0);
+TBitmap my_bitmap_info;
 
-  dBitmapVector.nElements_bytes = nElements_bytes;
 
-  if((dBitmapVector.bitmapVector=(TBitmapVector) calloc(nElements_bytes, DWORD))==NULL)
+//start struct tbitmap data
+void callMyBitmap(PART_INFO pinfo){
+  my_bitmap_info.bitmap_start = pinfo.firstSectorAddress+1;
+  my_bitmap_info.tamanho_index = pinfo.dataBlocksStart-pinfo.indexBlocksStart;
+  my_bitmap_info.tamanho_bitmap = pinfo.indexBlocksStart-bitmap_start;
+  my_bitmap_info.tamanho_data = tamanho_bitmap-tamanho_index;
+}
+
+
+//create bitmap descriptor
+int createDBitmapVector(TBitmapDescriptor dBitmapVector, int size_bits){
+  int nElements_bytes = size_bits/8 + (size_bits%8 > 1 ? 1:0);
+
+  dBitmapVector.nElements_bits = size_bits;
+  if((dBitmapVector.bitmapVector=(TBitmapVector) calloc(nElements_bytes, sizeof(BYTE)))==NULL)
     return -1;
 
     return 0;
@@ -28,14 +48,29 @@ int createDBitmapVector(TBitmapDescriptor dBitmapVector, WORD size_bits){
 //create global bitmap vectors descriptors
 startDBitmapVectors(PART_INFO pinfo){  //change name
 
-  WORD nBits_index = superblock.indexBlockAreaSize * pinfo.blockSize;
-  WORD nBits_data = superblock.dataBlockAreaSize * pinfo.blockSize;
+  int nBits_index;
+  int nBits_data;
 
+  int bitmapIndex_sectorSize;
+  int bitmap_dataStart;
+
+  callMyBitmap(pinfo);  //create bitmap struct info.
+  nBits_index = tamanho_index/pinfo.blockSize;
+  nBits_data = tamanho_data/pinfo.blockSize;
+
+  // create space for a copy in memory of bitmap
   createDBitmapVector(dBitmapIndexVector, nBits_index);
   createDBitmapVector(dBitmapDataVector, nBits_data);
 
-  entryDisk(...)
-  entryDisk(...)
+  // problema em determinar o tamanho do setor, pra nao multiplos de SECTOR_SIZE*8 --->
+
+  // fill space with actual data
+  bitmapIndex_sectorSize = (dBitmaIndexVector.nElements_bits/(SECTOR_SIZE*8) + dBitmaIndexVector.nElements_bits%(SECTOR_SIZE*8)>0?1:0);
+  sendBitmap2Memory(dBitmapIndexVector, my_bitmap_info.bitmap_start, bitmapIndex_sectorSize);
+
+  //bitmapIndex_sectorSize
+  bitmap_dataStart = my_bitmap_info.bitmap_start + bitmapIndex_sectorSize;
+  sendBitmap2Memory(dBitmapDataVector, bitmap_dataStart, );
 
 }
 
@@ -43,50 +78,25 @@ int deleteDBitmapVector(TBitmapDescriptor dBitmapVector){
   free(dBitmapVector.bitmapVector);
 }
 
-/*
-xxx(PART_INFO pinfo){
+sendBitmap2Memory(TBitmapDescriptor dBitmapVector, unsigned int startSector, unsigned int tamanho_setor){
 
+  unigned int actual_sector;
 
+  for(actual_sector=0; actual_sector<tamanho_setor; actual_sector++)
+    if(read_sector(startSector+actual_sector, dBitmapVector.bitmapVector + actual_sector*SECTOR_SIZE)!=0)
+      return -1;
 
-
-
+  return 0;
 }
-bitmap_start=partInfo.firstSectorAddress+1
-tamanho_index = dataBlocksStart-indexBlocksStart (setores)
-tamanho_bitmap = indexBlocksStart-bitmap_start (setores)
-tamanho_data = [2^(tamanho_bitmap*256*8)]/8*256-tamanho_index (setores)
-os n bits de bitmap representam 2^n blocos
-*/
-bool readPartInfoSectors() {
-	BYTE buffer[tamanho_bitmap*SECTOR_SIZE];
-	BYTE bufferSector[SECTOR_SIZE];
-
-	if (read_sector(0, bufferSector) == 0) {
-		partInfo.firstSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE);
-		partInfo.lastSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE + sizeof(DWORD));
-		return true;
-	}
-
-	return false;
-}
-
-
-
-/*
-START
-*/
-
-
-
 
 int	getBitmap (int bitmapType, int bitNumber){
   BYTE  whole_byte;
   if(bitmapType==INODE_TYPE){
-    if(bitNumber < dBitmapIndexVector.nElements_bytes*8)
+    if(bitNumber < dBitmapIndexVector.nElements_bits)
       whole_byte = dBitmapIndexVector.bitmapVector + (bitNumber/8);
       return (whole_byte & 1<<bitNumber%8)>0 ? 1:0;
   }else{
-    if(bitNumber < dBitmapDataVector.nElements_bytes*8)
+    if(bitNumber < dBitmapDataVector.nElements_bits)
       whole_byte = dBitmapDataVector.bitmapVector + (bitNumber/8);
       return (whole_byte & 1<<bitNumber%8)>0 ? 1:0;
   }
