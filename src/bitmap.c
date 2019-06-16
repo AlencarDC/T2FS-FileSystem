@@ -1,7 +1,11 @@
 #include "../include/bitmap.h"
 #include "../include/t2fs.h"
+#include "../include/apidisk.h"
 #include "../include/buffer_control.h"
 #include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct bitmapInfo{
     DWORD indexBitmapSize;  //Tamanho em blocos
@@ -16,7 +20,7 @@ static BITMAP_INFO bitmapInfo;
 static bool initialized = false;
 static BYTE *bufferBitmaps;
 
-int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
+static int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
   int i;
   bitmap = malloc(sizeof(SECTOR_SIZE * size));
@@ -31,7 +35,7 @@ int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
   return SUCCESS;
 }
 
-int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
+static int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
   int i;
   BYTE *buffer = malloc(sizeof(SECTOR_SIZE));
@@ -80,7 +84,6 @@ static	int setBit (int bitNumber, BYTE bitValue, BYTE *cache) {
 	
 	int	byteAddress;
 	int	mask;
-	int	deltaSetor;
 	
 	// Altera a cache
 	byteAddress = bitNumber / 8;

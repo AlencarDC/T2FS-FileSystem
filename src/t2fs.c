@@ -652,7 +652,7 @@ int read2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if (isFileOpened(handle) == true) 
-		return readFile(handle, buffer, size);
+		return readFile(handle, (BYTE *)buffer, size);
 	return ERROR;
 }
 
