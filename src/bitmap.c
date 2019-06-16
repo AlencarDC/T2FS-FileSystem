@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 
 typedef struct bitmapInfo{
@@ -23,12 +24,12 @@ static BYTE *bufferBitmaps;
 static int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
   int i;
-  bitmap = malloc(sizeof(SECTOR_SIZE * size));
-  BYTE *buffer = malloc(sizeof(SECTOR_SIZE));
+  bitmap = malloc(SECTOR_SIZE * size);
+  BYTE *buffer = malloc(SECTOR_SIZE);
   for (i = 0; i < size; i++) {
 			if (read_sector(sectorStart + i, buffer) != 0)
 				return ERROR;
-
+      
       memcpy(bitmap + (i * SECTOR_SIZE), buffer, SECTOR_SIZE);
   }
   free(buffer);
@@ -38,7 +39,7 @@ static int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
 static int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
   int i;
-  BYTE *buffer = malloc(sizeof(SECTOR_SIZE));
+  BYTE *buffer = malloc(SECTOR_SIZE);
   BYTE *pointer;
   for (i = 0; i < size; i++) {
 			pointer = bitmap + i * SECTOR_SIZE;
@@ -53,18 +54,16 @@ static int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
 //função para inicializar os dados do bitmap
 static void initializeBitmap(){
     //Inicializa PartInfo a partir do disco
-    readPartInfoBlocks();
-    readPartInfoSectors();
-    
+    initPartInfo(&partInfo);
+
     //Calcula tamanho do bitmap em bits (indice,blocos)
-    bitmapInfo.indexBitmapSize = partInfo.dataBlocksStart - partInfo.indexBlocksStart / partInfo.blockSize;
+    bitmapInfo.indexBitmapSize = (partInfo.dataBlocksStart - partInfo.indexBlocksStart) / partInfo.blockSize;
     bitmapInfo.dataBitmapSize = ((partInfo.lastSectorAddress - (partInfo.firstSectorAddress + 1))/partInfo.blockSize) - bitmapInfo.indexBitmapSize;
-    
     //Calcula o tamanho do bitmap em setores.
-    bitmapInfo.bitmapSize = ceil((float)(bitmapInfo.indexBitmapSize + bitmapInfo.dataBitmapSize) / (float)SECTOR_SIZE * 8);
+    bitmapInfo.bitmapSize = ceil((float)(bitmapInfo.indexBitmapSize + bitmapInfo.dataBitmapSize) / (float)(SECTOR_SIZE * 8));
     bitmapInfo.bitmapStart = partInfo.firstSectorAddress + 1;
 
-    bufferBitmaps = malloc(bitmapInfo.bitmapSize *SECTOR_SIZE);
+    bufferBitmaps = malloc(bitmapInfo.bitmapSize * SECTOR_SIZE);
     initialized = true;
 
     return readBitmapFromDisk(bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
@@ -136,7 +135,7 @@ int	searchBitmap(int bitmapType, int bitValue){
     return searchBitmapIndex(bufferBitmaps,bitValue);
   
   else //bitmapType == BITMAP_DATA
-    return searchBitmapData(bufferBitmaps,bitValue); 
+    return searchBitmapData(bufferBitmaps,bitValue);
 }
 
 

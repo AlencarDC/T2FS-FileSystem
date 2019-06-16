@@ -13,6 +13,7 @@
 #define	INVALID_PTR	-1
 #define NULL_INDEX_POINTER 0
 #define MAX_FILE_OPEN 10
+#define DEFAULT_BLOCK_SIZE 2
 
 #define SUCCESS 0
 #define ERROR -1
@@ -98,10 +99,10 @@ typedef struct {
 /********************************************************************************/
 
 // Le informacoes sobre os limites da particao contidos no MBR
-bool readPartInfoSectors();
+bool readPartInfoSectors(PART_INFO *partition);
 
 // Le informacoes sobre enderecos iniciais dos blocos de indice e dados contidos no Superbloco
-bool readPartInfoBlocks();
+bool readPartInfoBlocks(PART_INFO *partition);
 
 // Usado na formatacao para zerar todas posicoes do disco
 void cleanDisk();
@@ -116,7 +117,7 @@ int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name);
 int getRecordByPath(DIR_RECORD *record, char *path);
 
 // Inicializa a estrutura de partInfo, faz uma chamada para readPartInfoSectors() e para readpartInfoBlocks();
-bool initPartInfo();
+bool initPartInfo(PART_INFO *partition);
 
 // Inicializa as globais usadas para gerenciar o diretorio raiz, basicamente o bloco de indice da raiz
 bool initRootDir();

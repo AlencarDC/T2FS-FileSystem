@@ -20,7 +20,7 @@ char *currentPath;	// Caminho corrente do sistema de arquivos
 DWORD currentDirIndexPointer = -1; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
 DWORD rootDirIndex = -1; // Numero/endereco do Bloco de indice da raiz
 
-PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
+static PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
 HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
 HANDLER openedDirs[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos diretorios abertos
 
@@ -48,59 +48,38 @@ void _printPartInfo() {
 
 DWORD getFreeIndexBlock() {
 	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
-	setBitmap(BITMAP_INDEX, offset, 0);
-
-	return (partInfo.indexBlocksStart + offset);
+	printf("ofsset indexBlock %d\n", offset);
+	 if (offset > 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
+		return (partInfo.indexBlocksStart + offset - 1); // offset comeca em 1, por isso o -1
+	
+	return ERROR;
 }
 
 DWORD getFreeDataBlock() {
 	DWORD offset = searchBitmap(BITMAP_DATA, 1);
-	setBitmap(BITMAP_DATA, offset, 0);
+	printf("ofsset dataBlock %d\n", offset);
+	if (offset > 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
+		return (partInfo.dataBlocksStart + offset - 1); // offset comeca em 1, por isso o -1
 	
-	return (partInfo.dataBlocksStart + offset);
-}
-
-bool readPartInfoSectors() {
-	BYTE bufferSector[SECTOR_SIZE];
-
-	if (read_sector(0, bufferSector) == 0) {
-		partInfo.firstSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE);
-		partInfo.lastSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE + sizeof(DWORD));
-		return true;
-	}
-
-	return false;
-}
-
-bool readPartInfoBlocks() {
-	BYTE sectorBuffer[SECTOR_SIZE];
-	SUPERBLOCK superblock;
-
-	if (read_sector(partInfo.firstSectorAddress, sectorBuffer) == 0) {
-		memcpy(&superblock, sectorBuffer, sizeof(SUPERBLOCK));
-		partInfo.indexBlocksStart = partInfo.firstSectorAddress + superblock.bitmapSectorsSize + 1; // Inicio + bitmap + superbloco
-		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
-		partInfo.numberOfPointers = superblock.numberOfPointers;
-		
-		return true;
-	}
-	
-	return false;
+	return ERROR;
 }
 
 bool createRootDir() {
 	// Espera-se que essa funcao seja chamada logo apos uma formatacao
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
-		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja 0
-		if (freeIndexBlock == 0) {
+		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja o primeiro bloco de indice
+		/*printf("freeIndexBlcok %d\n", freeIndexBlock);
+		if (freeIndexBlock == partInfo.indexBlocksStart) {
 			DWORD freeDataBlock = getFreeDataBlock();
-			
-			//createRecord("..", RECORD_DIR);
-			//createRecord(".", RECORD_DIR);
+			printf("freeDataBlock %d\n", freeDataBlock);
+			if (freeDataBlock >= partInfo.dataBlocksStart) {
+				//createRecord("..", RECORD_DIR);
+				//createRecord(".", RECORD_DIR);
 
-			return true;
-		}
+				return true;
+			}
+		}*/
 		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar");
 	}
 	return false;
@@ -336,12 +315,49 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 	return ERROR;
 }
 
-bool initPartInfo() {
-	return (readPartInfoSectors() == true && readPartInfoBlocks() == true);
+bool readPartInfoSectors(PART_INFO *partition) {
+	BYTE bufferSector[SECTOR_SIZE];
+
+	if (read_sector(0, bufferSector) == 0) {
+		partition->firstSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE);
+		partition->lastSectorAddress = bufferToDWORD(bufferSector, INIT_BYTE_PART_TABLE + sizeof(DWORD));
+		return true;
+	}
+
+	return false;
+}
+
+bool readPartInfoBlocks(PART_INFO *partition) {
+	BYTE sectorBuffer[SECTOR_SIZE];
+	SUPERBLOCK superblock;
+
+	if (read_sector(partition->firstSectorAddress, sectorBuffer) == 0) {
+		memcpy(&superblock, sectorBuffer, sizeof(SUPERBLOCK));
+		// Se nao ter um particao T2FS formatada no local temos que formatar antes
+		if (memcmp(superblock.id, "T2FS", 4) != 0) {
+			format2(DEFAULT_BLOCK_SIZE);
+			if (read_sector(partition->firstSectorAddress, sectorBuffer) == 0)
+				memcpy(&superblock, sectorBuffer, sizeof(SUPERBLOCK));
+			else 
+				return false;
+		}
+
+		partition->indexBlocksStart = partition->firstSectorAddress + superblock.bitmapSectorsSize + 1; // Inicio + bitmap + superbloco
+		partition->dataBlocksStart = partition->indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
+		partition->numberOfPointers = superblock.numberOfPointers;
+		partition->blockSize = superblock.blockSize;
+		return true;
+	}
+	
+	return false;
+}
+
+bool initPartInfo(PART_INFO *partition) {
+	return (readPartInfoSectors(partition) == true && readPartInfoBlocks(partition) == true);
 }
 
 bool initRootDir() {
-	if (getBitmap(BITMAP_INDEX, 0)) {
+	if (getBitmap(BITMAP_INDEX, 0) == 0) {
 		currentPath = "/";
 		currentDirIndexPointer = 0;
 		rootDirIndex = 0;
@@ -352,17 +368,15 @@ bool initRootDir() {
 }
 
 bool init() {
-	if (initPartInfo() == true && initRootDir() == true) {
+	if (initPartInfo(&partInfo) == true && initRootDir() == true) {
 		int i;
 		for (i = 0; i < MAX_FILE_OPEN; i++) {
 			openedFiles[i].free = true;
 			//... WARNING deve inicializar os outros campos tambem?
 		}
 
-		currentPath = "/";
-		
-
 		initialized = true;
+		return true;
 	}
 
 	return false;
@@ -540,7 +554,7 @@ Função:	Formata logicamente o disco virtual t2fs_disk.dat para o sistema de
 int format2 (int sectors_per_block) {
 	BYTE buffer[SECTOR_SIZE] = {0};
 
-	if (readPartInfoSectors() == true) {
+	if (readPartInfoSectors(&partInfo) == true) {
 		cleanDisk();
 		
 		// Escreve o superbloco 
@@ -566,6 +580,7 @@ int format2 (int sectors_per_block) {
 		partInfo.indexBlocksStart = partInfo.firstSectorAddress + superblock.bitmapSectorsSize + 1; // Inicio + bitmap + superbloco
 		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
 		partInfo.numberOfPointers = superblock.numberOfPointers;
+		partInfo.blockSize = superblock.blockSize;
 		_printPartInfo();
 		
 		createRootDir();
