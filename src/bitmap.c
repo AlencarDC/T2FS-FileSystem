@@ -79,7 +79,7 @@ static	bool getBit (int bitNumber, BYTE *cache) {
 	return (cache[byteAddress] & mask?true:false);
 }
 
-static	int setBit (int bitNumber, BYTE bitValue, BYTE *cache) {
+static	int setBit (int bitNumber, int bitValue, BYTE *cache) {
 	
 	int	byteAddress;
 	int	mask;
