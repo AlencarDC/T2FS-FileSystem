@@ -432,6 +432,7 @@ DIR_RECORD createRecord(char *filename, int type) {
 
 bool isFileOpened(FILE2 handle) {
 	return (handle >= 0 && openedFiles[handle].free == false);
+}
 
 bool readIsWithinBoundary(HANDLER toCheck, int size){
 	return (toCheck.pointer + size - 1 < toCheck.record.byteFileSize);
