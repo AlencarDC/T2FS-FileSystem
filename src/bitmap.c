@@ -61,6 +61,7 @@ static void initializeBitmap(){
     bitmapInfo.bitmapStart = partInfo.firstSectorAddress + 1;
 
     bufferBitmaps = malloc(bitmapInfo.bitmapSize *SECTOR_SIZE);
+    initialized = true;
 
     return readBitmapFromDisk(bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
 }
