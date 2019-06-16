@@ -16,6 +16,36 @@ static BITMAP_INFO bitmapInfo;
 static bool initialized = false;
 static BYTE *bufferBitmaps;
 
+int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD, size) {
+  // size eh dado em setores
+  int i;
+  bitmap = malloc(sizeof(SECTOR_SIZE * size));
+  BYTE *buffer = malloc(sizeof(SECTOR_SIZE));
+  for (i = 0; i < size; i++) {
+			if (read_sector(sectorStart + i, buffer) != 0)
+				return ERROR;
+
+      memcpy(bitmap + (i * SECTOR_SIZE), buffer);
+  }
+  free(buffer);
+  return SUCCESS;
+}
+
+int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD, size) {
+  // size eh dado em setores
+  int i;
+  BYTE *buffer = malloc(sizeof(SECTOR_SIZE));
+  BYTE *pointer;
+  for (i = 0; i < size; i++) {
+			pointer = bitmap + i * SECTOR_SIZE;
+      memcpy(buffer, pointer, SECTOR_SIZE);
+      if (write_sector(sectorStart + i, buffer) != 0)
+				return ERROR;
+  }
+  free(buffer);
+  return SUCCESS;
+}
+
 //função para inicializar os dados do bitmap
 static void initializeBitmapInfo(){
     //Inicializa PartInfo a partir do disco
