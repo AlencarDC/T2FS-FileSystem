@@ -15,7 +15,7 @@ typedef struct bitmapInfo{
     DWORD bitmapSize;       //Tamanho em setores
 } BITMAP_INFO;
 
-static PART_INFO partInfo;
+PART_INFO partInfo;
 
 static BITMAP_INFO bitmapInfo;
 static bool initialized = false;
@@ -93,7 +93,7 @@ static	int setBit (int bitNumber, BYTE bitValue, BYTE *cache) {
 		cache[byteAddress] &= ~mask;
 	
   // Grava no disco
-  return writeBitmapFromDisk(cache,bitmapInfo.bitmapStart, bitmapInfo.bitmapStart);
+  return writeBitmapFromDisk(cache,bitmapInfo.bitmapStart, bitmapInfo.bitmapSize);
 	
 }
 
@@ -120,7 +120,7 @@ int searchBitmapData(BYTE* buffer, int value){
 
   for(i = bitmapInfo.indexBitmapSize; i < bitmapInfo.indexBitmapSize + bitmapInfo.dataBitmapSize; i++){
     if (getBit(i,buffer) == booleanValue){
-      return i;
+      return i - bitmapInfo.indexBitmapSize;
     }
   }
 
