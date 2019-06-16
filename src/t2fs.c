@@ -92,7 +92,7 @@ bool createRootDir() {
 	// Espera-se que essa funcao seja chamada logo apos uma formatacao
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
-		DWORD freeIndexBlock = getFreeDataBlock(); // Espera-se que seja 0
+		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja 0
 		if (freeIndexBlock == 0) {
 			DWORD freeDataBlock = getFreeDataBlock();
 			
