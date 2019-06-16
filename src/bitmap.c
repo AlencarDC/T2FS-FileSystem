@@ -47,7 +47,7 @@ int writeBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
 }
 
 //função para inicializar os dados do bitmap
-static void initializeBitmapInfo(){
+static void initializeBitmap(){
     //Inicializa PartInfo a partir do disco
     readPartInfoBlocks();
     readPartInfoSectors();
@@ -59,6 +59,11 @@ static void initializeBitmapInfo(){
     //Calcula o tamanho do bitmap em setores.
     bitmapInfo.bitmapSize = ceil((float)(bitmapInfo.indexBitmapSize + bitmapInfo.dataBitmapSize) / (float)SECTOR_SIZE * 8);
     bitmapInfo.bitmapStart = partInfo.firstSectorAddress + 1;
+
+    bufferBitmaps = malloc(bitmapInfo.bitmapSize *SECTOR_SIZE);
+    initialized = true;
+
+    return readBitmapFromDisk(bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
 }
 
 static	bool getBit (int bitNumber, BYTE *cache) {
@@ -86,6 +91,7 @@ static	int setBit (int bitNumber, BYTE bitValue, BYTE *cache) {
 		cache[byteAddress] &= ~mask;
 	
   // Grava no disco
+  return writeBitmapFromDisk(cache,bitmapInfo.bitmapStart, bitmapInfo.bitmapStart);
 	
 }
 
@@ -120,6 +126,9 @@ int searchBitmapData(BYTE* buffer, int value){
 }
 
 int	searchBitmap(int bitmapType, int bitValue){
+  if(!initialized)
+    initializeBitmap();
+
   if(bitmapType == BITMAP_INDEX)
     return searchBitmapIndex(bufferBitmaps,bitValue);
   
@@ -129,6 +138,9 @@ int	searchBitmap(int bitmapType, int bitValue){
 
 
 int setBitmap(int bitmapType, int bitNumber, int bitValue){
+  if(!initialized)
+    initializeBitmap();
+
   if (bitmapType == BITMAP_INDEX)
     return setBit(bitNumber,bitValue,bufferBitmaps);
   else //bitmapType == BITMAP_DATA
@@ -136,6 +148,9 @@ int setBitmap(int bitmapType, int bitNumber, int bitValue){
 }
 
 int	getBitmap (int bitmapType, int bitNumber){
+  if(!initialized)
+    initializeBitmap();
+
   if(bitmapType == BITMAP_INDEX)
     return getBit(bitNumber,bufferBitmaps);
   else
