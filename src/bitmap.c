@@ -54,7 +54,8 @@ static	int setBit (int bitNumber, BYTE bitValue, BYTE *cache) {
 		cache[byteAddress] |= mask;
 	else
 		cache[byteAddress] &= ~mask;
-	// Grava no disco
+	
+  // Grava no disco
 	
 }
 
@@ -88,18 +89,26 @@ int searchBitmapData(BYTE* buffer, int value){
   return ERROR;
 }
 
-int	searchBitmap(int handle, int bitValue){
-  if(handle == BITMAP_INDEX)
+int	searchBitmap(int bitmapType, int bitValue){
+  if(bitmapType == BITMAP_INDEX)
     return searchBitmapIndex(bufferBitmaps,bitValue);
   
-  else //handle == BITMAP_DATA
+  else //bitmapType == BITMAP_DATA
     return searchBitmapData(bufferBitmaps,bitValue); 
 }
 
 
-int setBitmap(int handle, int bitNumber, int bitValue){
-  if (handle == BITMAP_INDEX)
-    setBit(bitNumber,bitValue,bufferBitmaps);
-  else //handle == BITMAP_DATA
-    setBit(bitNumber + bitmapInfo.indexBitmapSize,bitValue,bufferBitmaps); 
+int setBitmap(int bitmapType, int bitNumber, int bitValue){
+  if (bitmapType == BITMAP_INDEX)
+    return setBit(bitNumber,bitValue,bufferBitmaps);
+  else //bitmapType == BITMAP_DATA
+    return setBit(bitNumber + bitmapInfo.indexBitmapSize,bitValue,bufferBitmaps); 
+}
+
+int	getBitmap (int bitmapType, int bitNumber){
+  if(bitmapType == BITMAP_INDEX)
+    return getBit(bitNumber,bufferBitmaps);
+  else
+    return getBit(bitNumber + bitmapInfo.indexBitmapSize, bufferBitmaps);
+  
 }
