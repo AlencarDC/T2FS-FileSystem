@@ -32,12 +32,12 @@ typedef unsigned int DWORD;
 #pragma pack(push, 1)
 /* Informacoes relevantes sobre a particao */
 typedef struct{
-	DWORD firstSectorAddress;
-	DWORD lastSectorAddress;
-	DWORD indexBlocksStart;
-	DWORD dataBlocksStart;
-	DWORD numberOfPointers;
-	DWORD blockSize;
+	DWORD firstSectorAddress; 	// Numero do setor do primeiro setor da particao
+	DWORD lastSectorAddress;	// Numero do setor do ultimo setor da particao
+	DWORD indexBlocksStart;		// Primeiro setor da area de bloco de indices	
+	DWORD dataBlocksStart;		// Primeiro setor da area de bloco de dados
+	DWORD numberOfPointers;		// Numero de entrada em um bloco de indice, a ultima é o encadeamento
+	DWORD blockSize;			// Numero do bloco em setores
 } PART_INFO;
 
 /* Registro com as informacoes do superbloco */ 

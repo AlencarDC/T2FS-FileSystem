@@ -69,7 +69,7 @@ bool createRootDir() {
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
 		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja o primeiro bloco de indice
-		/*printf("freeIndexBlcok %d\n", freeIndexBlock);
+		printf("freeIndexBlcok %d\n", freeIndexBlock);
 		if (freeIndexBlock == partInfo.indexBlocksStart) {
 			DWORD freeDataBlock = getFreeDataBlock();
 			printf("freeDataBlock %d\n", freeDataBlock);
@@ -79,7 +79,7 @@ bool createRootDir() {
 
 				return true;
 			}
-		}*/
+		}
 		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar");
 	}
 	return false;
@@ -116,6 +116,32 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	superblock.numberOfPointers = sectorsPerBlock * SECTOR_SIZE /(int) sizeof(BLOCK_POINTER);
 
 	return superblock;
+}
+
+bool writeBlockAt(DWORD pointer, int type, BYTE *buffer) {
+	/* type: 
+		0 -> Bloco de dados
+		1 ou outro -> Blodo de indice */
+	DWORD startingSector = (type == 0) ? partInfo.dataBlocksStart : partInfo.indexBlocksStart;
+	int i;
+	BYTE *sectorBuffer = (BYTE *) malloc(SECTOR_SIZE);
+	for (i = 0; i < partInfo.blockSize; i++) {
+		memcpy(sectorBuffer, buffer + (i * SECTOR_SIZE), SECTOR_SIZE);
+		if (write_sector(startingSector, sectorBuffer) != 0) {
+			free(sectorBuffer);
+			return false;
+		}
+	}
+	free(sectorBuffer);
+	return true;
+}
+
+bool writeIndexBlockAt(DWORD pointer, BYTE *buffer) {
+	return (writeBlockAt(pointer, 1, buffer));
+}
+
+bool writeDataBlockAt(DWORD pointer, BYTE *buffer) {
+	return (writeBlockAt(pointer, 0, buffer));
 }
 
 int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
