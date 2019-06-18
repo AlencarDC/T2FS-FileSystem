@@ -49,7 +49,7 @@ void _printPartInfo() {
 DWORD getFreeIndexBlock() {
 	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
 	printf("ofsset indexBlock %d\n", offset);
-	 if (offset > 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
+	 if (offset >= 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
 		return (offset);
 	
 	return ERROR;
@@ -58,7 +58,7 @@ DWORD getFreeIndexBlock() {
 DWORD getFreeDataBlock() {
 	DWORD offset = searchBitmap(BITMAP_DATA, 1);
 	printf("ofsset dataBlock %d\n", offset);
-	if (offset > 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
+	if (offset >= 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
 		return (offset); 
 	
 	return ERROR;
@@ -69,7 +69,7 @@ bool createRootDir() {
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
 		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja o primeiro bloco de indice
-		/*printf("freeIndexBlcok %d\n", freeIndexBlock);
+		printf("freeIndexBlcok %d\n", freeIndexBlock);
 		if (freeIndexBlock == partInfo.indexBlocksStart) {
 			DWORD freeDataBlock = getFreeDataBlock();
 			printf("freeDataBlock %d\n", freeDataBlock);
@@ -79,7 +79,7 @@ bool createRootDir() {
 
 				return true;
 			}
-		}*/
+		}
 		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar");
 	}
 	return false;
