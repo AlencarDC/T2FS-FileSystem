@@ -47,7 +47,7 @@ Entra:
 Retorna
 	Sucesso
 		Achou o bit: índice associado ao bit (número positivo)
-		Não achou: ZERO
+		Não achou: Procura de novo
 	Erro: número negativo
 ------------------------------------------------------------------------*/
 int	searchBitmap (int bitmapType, int bitValue);
