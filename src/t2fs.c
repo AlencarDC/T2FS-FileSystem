@@ -80,7 +80,7 @@ bool createRootDir() {
 				return true;
 			}
 		}
-		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar");
+		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar\n");
 	}
 	return false;
 }
