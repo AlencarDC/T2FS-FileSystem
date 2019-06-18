@@ -21,16 +21,16 @@ static BITMAP_INFO bitmapInfo;
 static bool initialized = false;
 static BYTE *bufferBitmaps;
 
-static int readBitmapFromDisk(BYTE *bitmap, DWORD sectorStart, DWORD size) {
+static int readBitmapFromDisk(BYTE **bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
   int i;
-  bitmap = malloc(SECTOR_SIZE * size);
+  *bitmap = malloc(SECTOR_SIZE * size);
   BYTE *buffer = malloc(SECTOR_SIZE);
   for (i = 0; i < size; i++) {
 			if (read_sector(sectorStart + i, buffer) != 0)
 				return ERROR;
       
-      memcpy(bitmap + (i * SECTOR_SIZE), buffer, SECTOR_SIZE);
+      memcpy(*bitmap + (i * SECTOR_SIZE), buffer, SECTOR_SIZE);
   }
   free(buffer);
   return SUCCESS;
@@ -66,7 +66,7 @@ static void initializeBitmap(){
     bufferBitmaps = malloc(bitmapInfo.bitmapSize * SECTOR_SIZE);
     initialized = true;
 
-    return readBitmapFromDisk(bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
+    return readBitmapFromDisk(&bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
 }
 
 static	bool getBit (int bitNumber, BYTE *cache) {
