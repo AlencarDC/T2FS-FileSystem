@@ -25,4 +25,7 @@ BLOCK_POINTER bufferToBLOCK_POINTER(BYTE *buffer, int initialByte);
 // Insere um dir_record no bloco de dados de diretorio passado como parametro na posicao dada pelo index
 void insertDirEntryAt(BYTE **buffer, DIR_RECORD toInsert, int index);
 
+//Insere um BlockPointer no bloco de indice passado como parametro em buffer
+void insertBlockPointerAt(BYTE *buffer, BLOCK_POINTER toInsert, int index)
+
 #endif

@@ -49,7 +49,7 @@ void _printPartInfo() {
 DWORD getFreeIndexBlock() {
 	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
 	printf("ofsset indexBlock %d\n", offset);
-	 if (offset > 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
+	 if (offset >= 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
 		return (offset);
 	
 	return ERROR;
@@ -58,7 +58,7 @@ DWORD getFreeIndexBlock() {
 DWORD getFreeDataBlock() {
 	DWORD offset = searchBitmap(BITMAP_DATA, 1);
 	printf("ofsset dataBlock %d\n", offset);
-	if (offset > 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
+	if (offset >= 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
 		return (offset); 
 	
 	return ERROR;
@@ -415,6 +415,8 @@ DIR_RECORD createRecord(char *filename, int type) {
 	int indexIterator, i, dirIterator;
 	BLOCK_POINTER extractedPtr;
 	BLOCK_POINTER ptrToIndexBlock;
+	DWORD newDataBlockPointer;
+	BLOCK_POINTER newBlockPointer;
 	bool findEmptyEntry = false;
 
 	//Buffers para fetch de bloco de indice e bloco de dados
@@ -437,10 +439,24 @@ DIR_RECORD createRecord(char *filename, int type) {
 			extractedPtr = bufferToBLOCK_POINTER(indexBlockBuffer,indexIterator * sizeof(BLOCK_POINTER));
 
 			if((char)extractedPtr.valid == INVALID_BLOCK_PTR){
-				//TODO:aloca bloco de dados
-				//aponta para bloco de dados
-				//escreve newRecord no inicio
-				//retorna
+				if(newDataBlockPointer = getFreeDataBlock() >= 0){ //Achou um bloco válido
+					newBlockPointer.blockPointer = newDataBlockPointer;
+					newBlockPointer.valid = RECORD_REGULAR;
+
+					insertBlockPointerAt(indexBlockBuffer,newBlockPointer,indexIterator);
+					//TODO:Escreve no disco o bloco de indice
+					newRecord.indexAddress = getFreeIndexBlock();
+					insertDirEntryAt(dataBlockBuffer,newRecord,0);
+					//TODO:Escreve no disco o bloco de dados
+					return newRecord;
+				}
+
+				else{//Não achou bloco válido
+					free(indexBlockBuffer);
+					free(dataBlockBuffer);
+					newRecord.type = RECORD_INVALID;
+					return newRecord;
+				}
 			}
 			else{
 				getDataBlockByPointer(dataBlockBuffer,extractedPtr.blockPointer);
@@ -449,9 +465,8 @@ DIR_RECORD createRecord(char *filename, int type) {
 				for (dirIterator = 0; dirIterator < numberOfDirRecords; dirIterator++){
 					fetchedEntry = bufferToDIR_RECORD(dataBlockBuffer, dirIterator * sizeof(DIR_RECORD));
 					if(fetchedEntry.type == RECORD_INVALID){
-						//TODO:Escreve modificações no bloco
-						//Escreve no disco
-						//retorna
+						newRecord.indexAddress = getFreeIndexBlock();
+						
 					}
 				}
 			}
