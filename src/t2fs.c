@@ -50,7 +50,7 @@ DWORD getFreeIndexBlock() {
 	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
 	printf("ofsset indexBlock %d\n", offset);
 	 if (offset > 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
-		return (partInfo.indexBlocksStart + offset - 1); // offset comeca em 1, por isso o -1
+		return (offset);
 	
 	return ERROR;
 }
@@ -59,7 +59,7 @@ DWORD getFreeDataBlock() {
 	DWORD offset = searchBitmap(BITMAP_DATA, 1);
 	printf("ofsset dataBlock %d\n", offset);
 	if (offset > 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
-		return (partInfo.dataBlocksStart + offset - 1); // offset comeca em 1, por isso o -1
+		return (offset); 
 	
 	return ERROR;
 }
