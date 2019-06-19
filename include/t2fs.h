@@ -8,6 +8,8 @@
 #define	SECTOR_SIZE	256
 #define INIT_BYTE_PART_TABLE 8
 
+#define MAX_DIR_OPEN 10
+
 #define INVALID_BLOCK_PTR '\0'
 #define SECTOR_ERROR -31
 #define	INVALID_PTR	-1
@@ -97,6 +99,11 @@ typedef struct {
 /********************************************************************************/
 /************************************ PRIVATE ***********************************/
 /********************************************************************************/
+//Inicializa os handles de diretório
+void initDirHandles();
+
+//Inicializa os handles de arquivo
+void initFileHandles();
 
 // Le informacoes sobre os limites da particao contidos no MBR
 bool readPartInfoSectors(PART_INFO *partition);

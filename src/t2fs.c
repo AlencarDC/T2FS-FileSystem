@@ -385,6 +385,20 @@ bool initPartInfo(PART_INFO *partition) {
 	return (readPartInfoSectors(partition) == true && readPartInfoBlocks(partition) == true);
 }
 
+void initDirHandles(){
+	int i;
+	for(i = 0; i <MAX_DIR_OPEN; i++){
+		openedDirs[i].free = true;
+	}
+}
+
+void initFileHandles(){
+	int i;
+	for(i = 0; i <MAX_DIR_OPEN; i++){
+		openedFiles[i].free = true;
+	}
+}
+
 bool initRootDir() {
 	if (getBitmap(BITMAP_INDEX, 0) == 0) {
 		currentPath = "/";
@@ -399,11 +413,8 @@ bool initRootDir() {
 bool init() {
 	if (initPartInfo(&partInfo) == true && initRootDir() == true) {
 		int i;
-		for (i = 0; i < MAX_FILE_OPEN; i++) {
-			openedFiles[i].free = true;
-			//... WARNING deve inicializar os outros campos tambem?
-		}
-
+		initDirHandles();
+		initFileHandles();
 		initialized = true;
 		return true;
 	}
@@ -644,9 +655,13 @@ int format2 (int sectors_per_block) {
 		_printPartInfo();
 		
 		createRootDir();
-		
+		//WARNING: Shouldn't we use init instead?
+		initDirHandles();
+		initFileHandles();	
 		initialized = true;
+		//END OF WARNING
 		return SUCCESS;
+		
 	}
 	return ERROR;
 }
@@ -672,42 +687,41 @@ FILE2 create2 (char *filename) {
 	if (recordByPath == SUCCESS && record.type == RECORD_REGULAR) { // Deveria tratar link tambem?
 		// Encontrou um arquivo com o mesmo nome, precisa ser deletado
 		delete2(filename);
-	} else {
-		printf("ERRO: Ha um diretorio/link com esse mesmo nome, por favor escolha outro nome.\n");
-		return ERROR;
+	} else if(recordByPath == FILE_NOT_EXIST){
+		// Criar o arquivo propriamente dito
+		int size;
+		char **pathNames = splitPath(filename, &size);
+		DWORD dirIndexBlock;
+		char *lastSlash = strrchr(filename, '/');
+		if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+			dirIndexBlock = rootDirIndex;
+		else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
+			dirIndexBlock = currentDirIndexPointer;
+		else { // O arquivo esta posicionado em algum local por ai
+			// Remover nome do arquivo do path e buscar o index block do local
+			int slashIndex = lastSlash - filename;
+			char *filePath = malloc((slashIndex + 1) * sizeof(char));
+			memcpy(filePath, filename, slashIndex);
+			filePath[slashIndex] = '\0';
+			getRecordByPath(&record, filePath);
+			dirIndexBlock = record.indexAddress;
+		}
+		
+		record = createRecord(pathNames[size-1], RECORD_REGULAR, dirIndexBlock);
+		FILE2 handle = getFreeFileHandle();
+		if (handle == ERROR) {
+			printf("ATENCAO: o arquivo foi criado, mas o limite de arquivos abertos foi atingido.\nFeche um arquivo para poder abrir.\n");
+			return ERROR;
+		}
+
+		openedFiles[handle].free = false;
+		openedFiles[handle].path = filename;
+		openedFiles[handle].record = record;
+		openedFiles[handle].pointer = 0;
+		return handle;
 	}
 
-	// Criar o arquivo propriamente dito
-	int size;
-	char **pathNames = splitPath(filename, &size);
-	DWORD dirIndexBlock;
-	char *lastSlash = strrchr(filename, '/');
-	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
-		dirIndexBlock = rootDirIndex;
-	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
-		dirIndexBlock = currentDirIndexPointer;
-	else { // O arquivo esta posicionado em algum local por ai
-		// Remover nome do arquivo do path e buscar o index block do local
-		int slashIndex = lastSlash - filename;
-		char *filePath = malloc((slashIndex + 1) * sizeof(char));
-		memcpy(filePath, filename, slashIndex);
-		filePath[slashIndex] = '\0';
-		getRecordByPath(&record, filePath);
-		dirIndexBlock = record.indexAddress;
-	}
-	
-	record = createRecord(pathNames[size-1], RECORD_REGULAR, dirIndexBlock);
-	FILE2 handle = getFreeFileHandle();
-	if (handle == ERROR) {
-		printf("ATENCAO: o arquivo foi criado, mas o limite de arquivos abertos foi atingido.\nFeche um arquivo para poder abrir.\n");
-		return ERROR;
-	}
-
-	openedFiles[handle].free = false;
-	openedFiles[handle].path = filename;
-	openedFiles[handle].record = record;
-	openedFiles[handle].pointer = 0;
-	return handle;
+	return ERROR;
 }
 
 /*-----------------------------------------------------------------------------
