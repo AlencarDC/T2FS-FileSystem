@@ -697,6 +697,10 @@ FILE2 create2 (char *filename) {
 		return ERROR;
 	}
 
+	openedFiles[handle].free = false;
+	openedFiles[handle].path = filename;
+	openedFiles[handle].record = record;
+	openedFiles[handle].pointer = 0;
 	return handle;
 }
 
