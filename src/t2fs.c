@@ -666,9 +666,12 @@ FILE2 create2 (char *filename) {
 		return ERROR;
 	}
 
-	if (recordByPath == SUCCESS) {
+	if (recordByPath == SUCCESS && record.type == RECORD_REGULAR) { // Deveria tratar link tambem?
 		// Encontrou um arquivo com o mesmo nome, precisa ser deletado
 		delete2(filename);
+	} else {
+		printf("ERRO: Ha um diretorio/link com esse mesmo nome, por favor escolha outro nome.\n");
+		return ERROR;
 	}
 
 	// Criar o arquivo propriamente dito
