@@ -114,6 +114,8 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock);
 int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name);
 
 // Retorna o registro de diretorio apontado pelo pelo path
+#define FILE_NOT_EXIST -1
+#define PATH_INCORRECT -2
 int getRecordByPath(DIR_RECORD *record, char *path);
 
 // Inicializa a estrutura de partInfo, faz uma chamada para readPartInfoSectors() e para readpartInfoBlocks();
@@ -126,7 +128,7 @@ bool initRootDir();
 bool init();
 
 // Realiza a criacao de um novo record/registro no diretorio corrente
-DIR_RECORD createRecord(char *filename, int type);
+DIR_RECORD createRecord(char *filename, BYTE type, DWORD dirIndexPointer);
 
 //Armazena em block o bloco apontado em pointer dado o offset de inicio da área de blocos usadae tamanho do bloco.
 int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize);

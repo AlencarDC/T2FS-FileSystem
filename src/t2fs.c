@@ -267,7 +267,7 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 		if (getRecordByName(&buffRecord, indexPointer, dirNames[i]) == SUCCESS)
 			indexPointer = buffRecord.indexAddress;
 		else
-			return ERROR;
+			return ((i == size-1) ? FILE_NOT_EXIST : PATH_INCORRECT);
 	}
 	// Encontrou o record que precisava
 	*record = buffRecord;
@@ -409,10 +409,10 @@ bool init() {
 }
 
 
-DIR_RECORD createRecord(char *filename, int type, DWORD dirIndexPointer) {
+DIR_RECORD createRecord(char *filename, BYTE type, DWORD dirIndexPointer) {
 	DWORD indexBlockPointer = dirIndexPointer;
 	int blockSizeInBytes = SECTOR_SIZE * partInfo.blockSize *sizeof(BYTE);
-	int indexIterator, i, dirIterator;
+	int indexIterator, dirIterator;
 	BLOCK_POINTER extractedPtr;
 	BLOCK_POINTER ptrToIndexBlock;
 	DWORD newDataBlockPointer;
@@ -439,7 +439,7 @@ DIR_RECORD createRecord(char *filename, int type, DWORD dirIndexPointer) {
 			extractedPtr = bufferToBLOCK_POINTER(indexBlockBuffer,indexIterator * sizeof(BLOCK_POINTER));
 
 			if((char)extractedPtr.valid == INVALID_BLOCK_PTR){
-				if(newDataBlockPointer = getFreeDataBlock() >= 0){ //Achou um bloco válido
+				if((newDataBlockPointer = getFreeDataBlock()) >= 0){ //Achou um bloco válido
 					newBlockPointer.blockPointer = newDataBlockPointer;
 					newBlockPointer.valid = RECORD_REGULAR;
 
@@ -659,7 +659,45 @@ FILE2 create2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	return -1;//createRecord(filename, RECORD_REGULAR);
+	DIR_RECORD record;
+	int recordByPath = getRecordByPath(&record, filename);
+	if (recordByPath == PATH_INCORRECT) {
+		printf("ERRO: O caminho passado nao existe.\n");
+		return ERROR;
+	}
+
+	if (recordByPath == SUCCESS) {
+		// Encontrou um arquivo com o mesmo nome, precisa ser deletado
+		delete2(filename);
+	}
+
+	// Criar o arquivo propriamente dito
+	int size;
+	char **pathNames = splitPath(filename, &size);
+	DWORD dirIndexBlock;
+	char *lastSlash = strrchr(filename, '/');
+	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+		dirIndexBlock = rootDirIndex;
+	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
+		dirIndexBlock = currentDirIndexPointer;
+	else { // O arquivo esta posicionado em algum local por ai
+		// Remover nome do arquivo do path e buscar o index block do local
+		int slashIndex = lastSlash - filename;
+		char *filePath = malloc((slashIndex + 1) * sizeof(char));
+		memcpy(filePath, filename, slashIndex);
+		filePath[slashIndex] = '\0';
+		getRecordByPath(&record, filePath);
+		dirIndexBlock = record.indexAddress;
+	}
+	
+	record = createRecord(pathNames[size-1], RECORD_REGULAR, dirIndexBlock);
+	FILE2 handle = getFreeFileHandle();
+	if (handle == ERROR) {
+		printf("ATENCAO: o arquivo foi criado, mas o limite de arquivos abertos foi atingido.\nFeche um arquivo para poder abrir.\n");
+		return ERROR;
+	}
+
+	return handle;
 }
 
 /*-----------------------------------------------------------------------------
@@ -780,6 +818,8 @@ Função:	Função usada para criar um novo diretório.
 int mkdir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	
 
 	return ERROR;
 }
