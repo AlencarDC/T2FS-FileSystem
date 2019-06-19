@@ -70,10 +70,10 @@ bool createRootDir() {
 	if (rootDirIndex == -1) {
 		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja o primeiro bloco de indice
 		printf("freeIndexBlcok %d\n", freeIndexBlock);
-		if (freeIndexBlock == partInfo.indexBlocksStart) {
+		if (freeIndexBlock == 0) {
 			DWORD freeDataBlock = getFreeDataBlock();
 			printf("freeDataBlock %d\n", freeDataBlock);
-			if (freeDataBlock >= partInfo.dataBlocksStart) {
+			if (freeDataBlock >= 0) {
 				//createRecord("..", RECORD_DIR);
 				//createRecord(".", RECORD_DIR);
 
@@ -748,9 +748,14 @@ int seek2 (FILE2 handle, DWORD offset) {
 	if(openedFiles[handle].free == true)
 		return ERROR;
 	
-	openedFiles[handle].pointer = offset;
+	if (offset == -1) 
+		openedFiles[handle].pointer = openedFiles[handle].record.byteFileSize; // Posiciona ponteiro um byte apos o ultimo byte do arquivo
+	else if (openedFiles[handle].record.byteFileSize > offset)
+		openedFiles[handle].pointer = offset;
+	else
+		return ERROR;
 
-	return ERROR;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
