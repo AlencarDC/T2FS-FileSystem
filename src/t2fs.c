@@ -122,13 +122,15 @@ SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 bool writeBlockAt(DWORD pointer, int type, BYTE *buffer) {
 	/* type: 
 		0 -> Bloco de dados
-		1 ou outro -> Blodo de indice */
+		1 ou outro -> Bloco de indice */
 	DWORD startingSector = (type == 0) ? partInfo.dataBlocksStart : partInfo.indexBlocksStart;
 	int i;
 	BYTE *sectorBuffer = (BYTE *) malloc(SECTOR_SIZE);
+
+	startingSector += pointer * partInfo.blockSize;
 	for (i = 0; i < partInfo.blockSize; i++) {
 		memcpy(sectorBuffer, buffer + (i * SECTOR_SIZE), SECTOR_SIZE);
-		if (write_sector(startingSector, sectorBuffer) != 0) {
+		if (write_sector(startingSector + i, sectorBuffer) != 0) {
 			free(sectorBuffer);
 			return false;
 		}
@@ -489,7 +491,7 @@ DIR_RECORD createRecord(char *filename, BYTE type, DWORD dirIndexPointer) {
 						writeDataBlockAt(extractedPtr.blockPointer, dataBlockBuffer);
 						
 						free(dataBlockBuffer);
-						free(dataBlockBuffer);
+						free(indexBlockBuffer);
 						
 						return newRecord;
 					}
