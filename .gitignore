@@ -1,0 +1,7 @@
+.vscode
+bin
+lib/libt2fs.a
+teste/*
+!teste/*.*
+exemplo/*
+!exemplo/*.*

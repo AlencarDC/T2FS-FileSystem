@@ -76,6 +76,7 @@ bool createRootDir() {
 			if (freeDataBlock >= 0) {
 				//createRecord("..", RECORD_DIR);
 				//createRecord(".", RECORD_DIR);
+				initRootDir();
 
 				return true;
 			}
@@ -146,7 +147,7 @@ bool writeDataBlockAt(DWORD pointer, BYTE *buffer) {
 
 int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
 	int i,j;
-	BYTE sectorBuffer[SECTOR_SIZE]; 
+	BYTE* sectorBuffer = malloc(SECTOR_SIZE); 
 	DWORD initialSector = offset + (pointer * (DWORD)blockSize);
 
 	for(i = 0; i < blockSize;i++){
@@ -216,8 +217,8 @@ char **splitPath(char *name, int *size) {
 }
 
 int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
-	BYTE indexBlock[SECTOR_SIZE * partInfo.blockSize];
-	BYTE dataBlock[SECTOR_SIZE * partInfo.blockSize];
+	BYTE* indexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE* dataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
 	BLOCK_POINTER bufferPointer;
 	DIR_RECORD bufferRecord;
 
@@ -226,8 +227,10 @@ int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
 		getIndexBlockByPointer(indexBlock, indexPointer);
 		int indexIterator;
 		// Busca entradas do diretorio
-		for (indexIterator = 0; indexIterator < partInfo.numberOfPointers-1; indexPointer++) {
+		for (indexIterator = 0; indexIterator < partInfo.numberOfPointers-1; indexIterator++) {
+			
 			bufferPointer = bufferToBLOCK_POINTER(indexBlock, indexIterator * sizeof(bufferPointer));
+
 			if (bufferPointer.valid != INVALID_BLOCK_PTR) {
 				getDataBlockByPointer(dataBlock, bufferPointer.blockPointer);
 				
