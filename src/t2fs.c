@@ -409,8 +409,8 @@ bool init() {
 }
 
 
-DIR_RECORD createRecord(char *filename, int type) {
-	DWORD indexBlockPointer = currentDirIndexPointer;
+DIR_RECORD createRecord(char *filename, int type, DWORD dirIndexPointer) {
+	DWORD indexBlockPointer = dirIndexPointer;
 	int blockSizeInBytes = SECTOR_SIZE * partInfo.blockSize *sizeof(BYTE);
 	int indexIterator, i, dirIterator;
 	BLOCK_POINTER extractedPtr;
@@ -428,7 +428,7 @@ DIR_RECORD createRecord(char *filename, int type) {
 	newRecord.byteFileSize = 0;
 	strcpy(newRecord.name,filename);
 	newRecord.type = type;
-	//TODO:Alocar bloco de indices e bloco de dados consistentes pro arquivo
+	
 	
 	//Fetch do bloco de indices do diretorio corrente
 	getIndexBlockByPointer(indexBlockBuffer,indexBlockPointer);
@@ -444,16 +444,21 @@ DIR_RECORD createRecord(char *filename, int type) {
 					newBlockPointer.valid = RECORD_REGULAR;
 
 					insertBlockPointerAt(indexBlockBuffer,newBlockPointer,indexIterator);
-					//TODO:Escreve no disco o bloco de indice
+					writeIndexBlockAt(indexBlockPointer,indexBlockBuffer);//Escreve no disco o bloco de indice
 					newRecord.indexAddress = getFreeIndexBlock();
 					insertDirEntryAt(dataBlockBuffer,newRecord,0);
-					//TODO:Escreve no disco o bloco de dados
+					writeDataBlockAt(newDataBlockPointer,dataBlockBuffer);//Escreve no disco o bloco de dados
+					
+					free(dataBlockBuffer);
+					free(indexBlockBuffer);
+					
 					return newRecord;
 				}
 
 				else{//Não achou bloco válido
 					free(indexBlockBuffer);
 					free(dataBlockBuffer);
+					
 					newRecord.type = RECORD_INVALID;
 					return newRecord;
 				}
@@ -466,20 +471,31 @@ DIR_RECORD createRecord(char *filename, int type) {
 					fetchedEntry = bufferToDIR_RECORD(dataBlockBuffer, dirIterator * sizeof(DIR_RECORD));
 					if(fetchedEntry.type == RECORD_INVALID){
 						newRecord.indexAddress = getFreeIndexBlock();
+						insertDirEntryAt(dataBlockBuffer,newRecord,dirIterator);
+						writeDataBlockAt(extractedPtr.blockPointer, dataBlockBuffer);
 						
+						free(dataBlockBuffer);
+						free(dataBlockBuffer);
+						
+						return newRecord;
 					}
 				}
 			}
 		}
-		BLOCK_POINTER ptrToIndexBlock = bufferToBLOCK_POINTER(indexBlockBuffer,(partInfo.numberOfPointers - 1)* sizeof(BLOCK_POINTER));
-		if(ptrToIndexBlock.valid == INVALID_BLOCK_PTR){
-			//Aloca bloco de indices
-			//Faz bloco antigo apontar para o novo
-			DWORD newPtrIndexBlock = 0; //alocado acima
+		ptrToIndexBlock = bufferToBLOCK_POINTER(indexBlockBuffer,(partInfo.numberOfPointers - 1)* sizeof(BLOCK_POINTER));
+		if(ptrToIndexBlock.valid == INVALID_BLOCK_PTR){//Necessário alocar outro bloco de indices
+			DWORD newPtrIndexBlock = getFreeIndexBlock(); //Aloca bloco de indices
+			newBlockPointer.valid = RECORD_REGULAR;//Cria estrutura block pointer
+			newBlockPointer.blockPointer = newPtrIndexBlock;
+			insertBlockPointerAt(indexBlockBuffer,newBlockPointer,indexIterator);//Insere no ultimo indice
+			writeIndexBlockAt(indexBlockPointer,indexBlockBuffer);//Escreve Bloco de indice no disco.
 			getIndexBlockByPointer(indexBlockBuffer,newPtrIndexBlock);
+			indexBlockPointer = newPtrIndexBlock;
 		}
-		else
+		else{
 			getIndexBlockByPointer(indexBlockBuffer,ptrToIndexBlock.blockPointer);
+			indexBlockPointer = ptrToIndexBlock.blockPointer;
+		}
 		
 	}
 	return newRecord;
