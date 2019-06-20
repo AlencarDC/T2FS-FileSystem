@@ -553,8 +553,8 @@ bool isDirOpened(DIR2 handle) {
 
 int writeFile(FILE2 handle, BYTE *buffer, int size){
 	HANDLER archiveToWrite;
-	BYTE *bufferDataBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
-	BYTE *bufferIndexBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
 	DWORD logicBlockToWrite, offsetInBlock, currentIndexLevel, currentIndexLevelBlkPointer, offsetInCurrentIndex;
 	DWORD sizeWritten;
 	DWORD bufferIndex;
@@ -562,7 +562,6 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 	int i;
 	bufferIndex = 0;
 	currentIndexLevel = 0;
-	
 	archiveToWrite = openedFiles[handle];
 	currentIndexLevelBlkPointer = archiveToWrite.record.indexAddress;
 	while(!writeCompleted){
@@ -571,8 +570,7 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 		//Determina o offset dentro do bloco logico acima
 		offsetInBlock = archiveToWrite.pointer % partInfo.blockSize * SECTOR_SIZE;
 		//Calcula o nível de indice necessário
-		DWORD indexLevelNeeded = logicBlockToWrite / partInfo.numberOfPointers - 1;
-				
+		DWORD indexLevelNeeded = logicBlockToWrite / (partInfo.numberOfPointers - 1);	
 		getIndexBlockByPointer(bufferIndexBlock,currentIndexLevelBlkPointer);
 		while(currentIndexLevel < indexLevelNeeded){
 			currentIndexLevel++;
@@ -637,10 +635,12 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 			bufferIndex += sizeToWrite;
 			archiveToWrite.pointer += sizeToWrite;
 			sizeWritten += sizeToWrite;
+			archiveToWrite.record.byteFileSize += sizeToWrite;
 		}
 
 		free(bufferDataBlock);
 		free(bufferIndexBlock);
+		openedFiles[handle] = archiveToWrite;
 		return sizeWritten;
 
 	
@@ -651,8 +651,8 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 
 int readFile(FILE2 handle, BYTE *buffer, int size){
 	bool readDone = false;
-	BYTE *bufferDataBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
-	BYTE *bufferIndexBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
 	HANDLER archiveToRead;
 	DWORD logicBlockToRead, offsetInCurrentIndex;
 	DWORD bufferPointer = 0;
@@ -674,7 +674,7 @@ int readFile(FILE2 handle, BYTE *buffer, int size){
 		//Determina o offset dentro do bloco logico acima
 		offsetInBlock = archiveToRead.pointer % partInfo.blockSize * SECTOR_SIZE;
 		//Calcula o nível de indice necessário
-		DWORD indexLevelNeeded = logicBlockToRead / partInfo.numberOfPointers - 1;
+		DWORD indexLevelNeeded = logicBlockToRead / (partInfo.numberOfPointers - 1);
 		//Caso o nível de indice necessario para acessar seja maior que o nível acessado
 		if(indexLevelNeeded > currentIndexLevel){
 			//Itera sobre os níveis de indice até achar o correto
