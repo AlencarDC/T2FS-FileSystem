@@ -7,4 +7,4 @@ teste/*
 exemplo/*
 !exemplo/*.*
 !exemplo/Makefile
-exemplo/*.dat
+exemplo/t2fs_disk.dat
