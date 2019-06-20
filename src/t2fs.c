@@ -315,7 +315,7 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 	DWORD dataBlockNumber = recordPointer / numberOfRecordsPerDataBlock;
 	// numero do bloco de indice que armazena o bloco de dados que contem o registro apontado por recordPointer
 	DWORD indexBlockNumber = (dataBlockNumber / (partInfo.numberOfPointers - 1)); 
-
+	
 	// Pegar o ponteiro do bloco de indice que o record esta
 	int i;
 	for (i = 0; i < indexBlockNumber; i++) {
@@ -326,6 +326,7 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 		else
 			return ERROR;
 	}
+
 	//Pegar bloco de indice e endereco pro bloco de dados que esta o registro
 	getIndexBlockByPointer(indexBlock, indexPointer);
 	DWORD dataBlockPointer = dataBlockNumber % partInfo.numberOfPointers; 	// Nessa conta tem o -1 na numberOfPointer Ou nao??
@@ -341,11 +342,9 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 		getDataBlockByPointer(dataBlock, bufferPointer.blockPointer);
 		for (recordIterator = recordPointer; recordIterator < numberOfRecordsPerDataBlock; recordIterator++) {
 			bufferRecord = bufferToDIR_RECORD(dataBlock, recordIterator * sizeof(bufferRecord));
-			if (bufferRecord.type == RECORD_DIR) {
-				// Achou o registro valido, calcula o seu numero equivalente
-				*record = bufferRecord;
-				return (recordIterator + numberOfRecordsPerDataBlock * (dataBlockNumber-1));
-			}
+			// Achou o registro valido, calcula o seu numero equivalente
+			*record = bufferRecord;				
+			return (recordIterator + numberOfRecordsPerDataBlock * dataBlockNumber);
 		}
 		// Nao esta nesse bloco, pegar o proximo
 		DWORD insideBlockPointerNumber = (dataBlockNumber % partInfo.numberOfPointers); // Vai -1?
@@ -366,7 +365,6 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 		dataBlockNumber++; // aumentar o numero do bloco de dados desse diretorio. Numero total, por exemplo diretorio utiliza 34 blocos de dados
 	} while (dirRecordNotFound);
 
-	
 	return ERROR;
 }
 
@@ -1057,11 +1055,10 @@ DIR2 opendir2 (char *pathname) {
 		if (getRecordByPath(&dirRecord, pathname) == SUCCESS) {
 			// checar se o arquivo é DIR
 			if (dirRecord.type == RECORD_DIR) {
-				openedFiles[handle].free = false;
-				openedFiles[handle].path = pathname;
-				openedFiles[handle].record = dirRecord;
-				openedFiles[handle].pointer = getNextDirRecordValid(&buffer, dirRecord.indexAddress, 0);
-
+				openedDirs[handle].free = false;
+				openedDirs[handle].path = pathname;
+				openedDirs[handle].record = dirRecord;
+				openedDirs[handle].pointer = getNextDirRecordValid(&buffer, dirRecord.indexAddress, 0);
 				return handle;
 			}
 		}
@@ -1082,6 +1079,7 @@ int readdir2 (DIR2 handle, DIRENT2 *dentry) {
 	if (isDirOpened(handle) == true) {
 		DIR_RECORD record;
 		DWORD newPointer = getNextDirRecordValid(&record, openedDirs[handle].record.indexAddress, openedDirs[handle].pointer);
+		openedDirs[handle].pointer = newPointer + 1;
 		if (newPointer == ERROR) {
 			dentry = NULL;
 			return ERROR;
