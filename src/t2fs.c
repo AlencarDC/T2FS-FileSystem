@@ -1017,10 +1017,12 @@ FILE2 open2 (char *filename) {
 							openedFiles[handle].record = dirRecord;
 						} else {
 							printf("ERRO: Nao foi possivel encontrar o arquivo referenciado.");
+							openedFiles[handle].free = true;
 							return ERROR;
 						}
 					} else {
 						printf("ERRO: Nao possivel ler o endereco real\n");
+						openedFiles[handle].free = true;
 						return ERROR;
 					}
 				}
