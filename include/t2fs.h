@@ -91,6 +91,7 @@ typedef struct {
 	DIR_RECORD record;
 	char *path;
 	DWORD pointer;	// Ponteiro atual da posição do arquivo. HANDLE de ARQUIVOS = posicao do byte atual; HANDLE de DIRETORIO = posicao do registro atual
+	DWORD dirIndexPtr;
 } HANDLER;
 #pragma pack(pop)
 
