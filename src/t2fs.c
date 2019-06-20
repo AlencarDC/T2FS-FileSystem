@@ -81,9 +81,9 @@ bool createRootDir() {
 				rootPointer.blockPointer = freeDataBlock;
 				insertBlockPointerAt(indexBlockBuffer, rootPointer,0);
 				writeIndexBlockAt(freeIndexBlock, indexBlockBuffer);
-				//createRecord("..", RECORD_DIR, );
-				//createRecord(".", RECORD_DIR, );
 				initRootDir();
+				//Cria . e .. (no caso do root dir é o mesmo.)
+				createNavigationReferences(freeIndexBlock,freeIndexBlock);
 				free(indexBlockBuffer);
 
 				return true;
@@ -1166,6 +1166,8 @@ int mkdir2 (char *pathname) {
 		}
 		
 		record = createRecord(pathNames[size-1], RECORD_DIR, dirIndexBlock);
+		//Cria as referências . e ..
+		createNavigationReferences(record.indexAddress,dirIndexBlock);
 
 		return SUCCESS;
 	}
