@@ -501,6 +501,7 @@ DIR_RECORD createRecord(char *filename, BYTE type, DWORD dirIndexPointer) {
 					insertBlockPointerAt(indexBlockBuffer,newBlockPointer,indexIterator);
 					writeIndexBlockAt(indexBlockPointer,indexBlockBuffer);//Escreve no disco o bloco de indice
 					newRecord.indexAddress = getFreeIndexBlock();
+					getDataBlockByPointer(dataBlockBuffer,newDataBlockPointer);
 					insertDirEntryAt(dataBlockBuffer,newRecord,0);
 					writeDataBlockAt(newDataBlockPointer,dataBlockBuffer);//Escreve no disco o bloco de dados
 					
