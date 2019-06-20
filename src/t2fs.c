@@ -558,11 +558,14 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 	DWORD logicBlockToWrite, offsetInBlock, currentIndexLevel, currentIndexLevelBlkPointer, offsetInCurrentIndex;
 	DWORD sizeWritten;
 	DWORD bufferIndex;
+	DWORD initialPointer;
 	bool writeCompleted = false;
 	int i;
+	
 	bufferIndex = 0;
 	currentIndexLevel = 0;
 	archiveToWrite = openedFiles[handle];
+	initialPointer = archiveToWrite.pointer;
 	currentIndexLevelBlkPointer = archiveToWrite.record.indexAddress;
 	while(!writeCompleted){
 		//Posiciona num bloco logico o ponteiro
@@ -635,13 +638,18 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 			bufferIndex += sizeToWrite;
 			archiveToWrite.pointer += sizeToWrite;
 			sizeWritten += sizeToWrite;
-			archiveToWrite.record.byteFileSize += sizeToWrite;
 			size -= sizeWritten;
 		}
 
 		free(bufferDataBlock);
 		free(bufferIndexBlock);
+		//Caso tenha aumentado arquivo, initalPointer + sizeWritten da o novo tamanho do arquivo
+		if(initialPointer + sizeWritten > archiveToWrite.record.byteFileSize){
+			archiveToWrite.record.byteFileSize = initialPointer + sizeWritten;
+		}
+		
 		openedFiles[handle] = archiveToWrite;
+		
 		return sizeWritten;
 
 	
