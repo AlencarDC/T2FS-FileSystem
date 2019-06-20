@@ -289,7 +289,6 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 
 	int size;
 	char **dirNames = splitPath(path, &size);
-
 	int i;
 	DIR_RECORD buffRecord;
 	for (i = 0; i < size; i++) {
@@ -436,7 +435,6 @@ bool initRootDir() {
 
 bool init() {
 	if (initPartInfo(&partInfo) == true && initRootDir() == true) {
-		int i;
 		initDirHandles();
 		initFileHandles();
 		initialized = true;
@@ -784,7 +782,12 @@ int updateDirRecord(HANDLER toBeUpdated){
 Função:	Informa a identificação dos desenvolvedores do T2FS.
 -----------------------------------------------------------------------------*/
 int identify2 (char *name, int size) {
-	return -1;
+	char *brosNames = (char*) malloc(sizeof(char) * size);
+	strcpy(brosNames, "Alencar da Costa\t\t00288544\nMatheus Woeffel Camargo\t\t00288543\nRaphael Scherpinski Brandao\t00112233\n");	
+	if (strlen(brosNames) > size)
+		return ERROR;
+	name = brosNames;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
@@ -946,14 +949,20 @@ FILE2 open2 (char *filename) {
 				}
 				// Remover nome do arquivo do path e buscar o index block do local
 				char *lastSlash = strrchr(openedFiles[handle].path, '/');
-				int slashIndex = lastSlash - openedFiles[handle].path;
-				char *filePath = malloc((slashIndex + 1) * sizeof(char));
-				memcpy(filePath, openedFiles[handle].path, slashIndex);
-				filePath[slashIndex] = '\0';
-				getRecordByPath(&dirRecord, filePath);
-				free(filePath);
+				if (lastSlash == NULL) {
+					// arquivo no current dir
+					openedFiles[handle].dirIndexPtr = currentDirIndexPointer;
+				} else {
+					int slashIndex = lastSlash - openedFiles[handle].path;
+					char *filePath = malloc((slashIndex + 1) * sizeof(char));
+					memcpy(filePath, openedFiles[handle].path, slashIndex);
+					filePath[slashIndex] = '\0';
+					getRecordByPath(&dirRecord, filePath);
+					free(filePath);
 
-				openedFiles[handle].dirIndexPtr = dirRecord.indexAddress;
+					openedFiles[handle].dirIndexPtr = dirRecord.indexAddress;
+				}
+				
 				return handle;
 			}
 		}
@@ -1001,7 +1010,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if(isFileOpened(handle)){
-		sizeWritten = writeFile(handle,buffer,size);
+		sizeWritten = writeFile(handle,(BYTE*)buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
 		updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
