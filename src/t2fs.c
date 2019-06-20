@@ -198,11 +198,18 @@ char **splitPath(char *name, int *size) {
   int i = 0, n = 0;
 
   // Conta ocorrencias
+  if (strlen(name) > 0 && name[0] != '/')
+    n++;
   while (name[i] != '\0') {
     if (name[i] == '/')
         n++;
     i++;
   }
+  if (strlen(name) > 0 && name[strlen(name)-1] == '/') {
+      name[strlen(name)-1] = '\0';
+      n--;
+  }
+ 
   *size = n;
 
   i = 0;
@@ -211,10 +218,18 @@ char **splitPath(char *name, int *size) {
   char *substring;
   char *nameCopy = strdup(name); // Necessaroi para strsep
   while( (substring = strsep(&nameCopy,"/")) != NULL ) {
-    strings[i] = (char*) malloc(sizeof(char)*FILE_NAME_SIZE);
-    strcpy(strings[i], substring);
+    if (strlen(substring) > 0) {
+        strings[i] = (char*) malloc(sizeof(char)*FILE_NAME_SIZE);
+        strcpy(strings[i], substring);
+        i++;
+    }
   }
-
+  *size = n;
+  if (*size == 1 && strings[0] == NULL) {
+    *size = 0;
+    free(strings);
+    return NULL;
+  }
   return strings;
 }
 
@@ -686,44 +701,48 @@ FILE2 create2 (char *filename) {
 		return ERROR;
 	}
 
-	if (recordByPath == SUCCESS && record.type == RECORD_REGULAR) { // Deveria tratar link tambem?
-		// Encontrou um arquivo com o mesmo nome, precisa ser deletado
-		delete2(filename);
-	} else if(recordByPath == FILE_NOT_EXIST){
-		// Criar o arquivo propriamente dito
-		int size;
-		char **pathNames = splitPath(filename, &size);
-		DWORD dirIndexBlock;
-		char *lastSlash = strrchr(filename, '/');
-		if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
-			dirIndexBlock = rootDirIndex;
-		else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
-			dirIndexBlock = currentDirIndexPointer;
-		else { // O arquivo esta posicionado em algum local por ai
-			// Remover nome do arquivo do path e buscar o index block do local
-			int slashIndex = lastSlash - filename;
-			char *filePath = malloc((slashIndex + 1) * sizeof(char));
-			memcpy(filePath, filename, slashIndex);
-			filePath[slashIndex] = '\0';
-			getRecordByPath(&record, filePath);
-			dirIndexBlock = record.indexAddress;
-		}
-		
-		record = createRecord(pathNames[size-1], RECORD_REGULAR, dirIndexBlock);
-		FILE2 handle = getFreeFileHandle();
-		if (handle == ERROR) {
-			printf("ATENCAO: o arquivo foi criado, mas o limite de arquivos abertos foi atingido.\nFeche um arquivo para poder abrir.\n");
+	if (recordByPath == SUCCESS) {
+		//printf("%s %d %d\n", record.name, record.type, record.indexAddress);
+		if (record.type == RECORD_REGULAR) // Encontrou um arquivo com o mesmo nome, precisa ser deletado
+			delete2(filename);
+		else {
+			printf("ERRO: Ha um diretorio/link com esse mesmo nome, por favor escolha outro nome.\n");
 			return ERROR;
 		}
-
-		openedFiles[handle].free = false;
-		openedFiles[handle].path = filename;
-		openedFiles[handle].record = record;
-		openedFiles[handle].pointer = 0;
-		return handle;
 	}
 
-	return ERROR;
+	// Criar o arquivo propriamente dito
+	int size;
+	char **pathNames = splitPath(filename, &size);
+	DWORD dirIndexBlock;
+	char *lastSlash = strrchr(filename, '/');
+	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+		dirIndexBlock = rootDirIndex;
+	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
+		dirIndexBlock = currentDirIndexPointer;
+	else { // O arquivo esta posicionado em algum local por ai
+		// Remover nome do arquivo do path e buscar o index block do local
+		int slashIndex = lastSlash - filename;
+		char *filePath = malloc((slashIndex + 1) * sizeof(char));
+		memcpy(filePath, filename, slashIndex);
+		filePath[slashIndex] = '\0';
+		getRecordByPath(&record, filePath);
+		dirIndexBlock = record.indexAddress;
+		free(filePath);
+	}
+	
+	record = createRecord(pathNames[size-1], RECORD_REGULAR, dirIndexBlock);
+	FILE2 handle = getFreeFileHandle();
+	if (handle == ERROR) {
+		printf("ATENCAO: o arquivo foi criado, mas o limite de arquivos abertos foi atingido.\nFeche um arquivo para poder abrir.\n");
+		return ERROR;
+	}
+
+	openedFiles[handle].free = false;
+	openedFiles[handle].path = filename;
+	openedFiles[handle].record = record;
+	openedFiles[handle].pointer = 0;
+	return handle;
 }
 
 /*-----------------------------------------------------------------------------
@@ -845,9 +864,42 @@ int mkdir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	
+	DIR_RECORD record;
+	int recordByPath = getRecordByPath(&record, pathname);
+	if (recordByPath != FILE_NOT_EXIST) {
+		if (recordByPath == PATH_INCORRECT)
+			printf("ERRO: O caminho passado nao existe.\n");
+		else if (recordByPath == SUCCESS)// Ha um arquivo com o mesmo nome nesse path
+			printf("ERRRO: Ja existe um arquivo/diretorio/link com esse mesmo nome no caminho fornecido.\n");
 
-	return ERROR;
+		return ERROR;
+	
+	} else { // Criar o arquivo propriamente dito
+		int size;
+		char **pathNames = splitPath(pathname, &size);
+		DWORD dirIndexBlock;
+		char *lastSlash = strrchr(pathname, '/');
+
+		if (lastSlash == pathname) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+			dirIndexBlock = rootDirIndex;
+		else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
+			dirIndexBlock = currentDirIndexPointer;
+		else { // O arquivo esta posicionado em algum local por ai
+			// Remover nome do arquivo do path e buscar o index block do local
+			int slashIndex = lastSlash - pathname;
+			char *filePath = malloc((slashIndex + 1) * sizeof(char));
+			memcpy(filePath, pathname, slashIndex);
+			filePath[slashIndex] = '\0';
+
+			getRecordByPath(&record, filePath);
+			dirIndexBlock = record.indexAddress;
+			free(filePath);
+		}
+		
+		record = createRecord(pathNames[size-1], RECORD_DIR, dirIndexBlock);
+
+		return SUCCESS;
+	}
 }
 
 /*-----------------------------------------------------------------------------
