@@ -651,8 +651,8 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 
 int readFile(FILE2 handle, BYTE *buffer, int size){
 	bool readDone = false;
-	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize));
-	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize));
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
 	HANDLER archiveToRead;
 	DWORD logicBlockToRead, offsetInCurrentIndex;
 	DWORD bufferPointer = 0;
