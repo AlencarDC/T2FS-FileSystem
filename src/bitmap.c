@@ -74,7 +74,7 @@ static void initializeBitmap(){
     bufferBitmaps = malloc(bitmapInfo.bitmapSize * SECTOR_SIZE);
     initialized = true;
 
-    return readBitmapFromDisk(&bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
+    readBitmapFromDisk(&bufferBitmaps,bitmapInfo.bitmapStart,bitmapInfo.bitmapSize);
 }
 
 static	bool getBit (int bitNumber, BYTE *cache) {

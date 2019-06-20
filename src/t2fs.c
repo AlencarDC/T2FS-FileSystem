@@ -435,7 +435,6 @@ bool initRootDir() {
 
 bool init() {
 	if (initPartInfo(&partInfo) == true && initRootDir() == true) {
-		int i;
 		initDirHandles();
 		initFileHandles();
 		initialized = true;
@@ -1011,7 +1010,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if(isFileOpened(handle)){
-		sizeWritten = writeFile(handle,buffer,size);
+		sizeWritten = writeFile(handle,(BYTE*)buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
 		updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
