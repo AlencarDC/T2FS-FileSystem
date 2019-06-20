@@ -289,7 +289,6 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 
 	int size;
 	char **dirNames = splitPath(path, &size);
-
 	int i;
 	DIR_RECORD buffRecord;
 	for (i = 0; i < size; i++) {
@@ -636,6 +635,7 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 			archiveToWrite.pointer += sizeToWrite;
 			sizeWritten += sizeToWrite;
 			archiveToWrite.record.byteFileSize += sizeToWrite;
+			size -= sizeWritten;
 		}
 
 		free(bufferDataBlock);
@@ -942,14 +942,20 @@ FILE2 open2 (char *filename) {
 				}
 				// Remover nome do arquivo do path e buscar o index block do local
 				char *lastSlash = strrchr(openedFiles[handle].path, '/');
-				int slashIndex = lastSlash - openedFiles[handle].path;
-				char *filePath = malloc((slashIndex + 1) * sizeof(char));
-				memcpy(filePath, openedFiles[handle].path, slashIndex);
-				filePath[slashIndex] = '\0';
-				getRecordByPath(&dirRecord, filePath);
-				free(filePath);
+				if (lastSlash == NULL) {
+					// arquivo no current dir
+					openedFiles[handle].dirIndexPtr = currentDirIndexPointer;
+				} else {
+					int slashIndex = lastSlash - openedFiles[handle].path;
+					char *filePath = malloc((slashIndex + 1) * sizeof(char));
+					memcpy(filePath, openedFiles[handle].path, slashIndex);
+					filePath[slashIndex] = '\0';
+					getRecordByPath(&dirRecord, filePath);
+					free(filePath);
 
-				openedFiles[handle].dirIndexPtr = dirRecord.indexAddress;
+					openedFiles[handle].dirIndexPtr = dirRecord.indexAddress;
+				}
+				
 				return handle;
 			}
 		}
@@ -999,7 +1005,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if(isFileOpened(handle)){
 		sizeWritten = writeFile(handle,buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
-		updateDirRecord(openedFiles[handle]);
+		//updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
 	}
 	
