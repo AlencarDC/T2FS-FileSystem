@@ -64,6 +64,14 @@ DWORD getFreeDataBlock() {
 	return ERROR;
 }
 
+DWORD freeDataBlock(DWORD dataBlockPointer){
+	return setBitmap(BITMAP_DATA,dataBlockPointer,1);
+}
+
+DWORD freeIndexBlock(DWORD indexBlockPointer){
+	return setBitmap(BITMAP_INDEX,indexBlockPointer,1);
+}
+
 bool createRootDir() {
 	BLOCK_POINTER rootPointer;
 	BYTE* indexBlockBuffer = malloc(partInfo.blockSize * SECTOR_SIZE);
@@ -1005,14 +1013,9 @@ FILE2 open2 (char *filename) {
 				openedFiles[handle].pointer = 0;
 				// Se link, repetir abertura pro arquivo real
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
-					printf("Entrou para LINK\n");
-					char *realFilePath;
-					int k;
-					if ((k = readFile(handle, (BYTE*)&realFilePath, MAX_FILE_NAME_SIZE + 1)) == SUCCESS) {
-						printf("Passou na leitura\n");
-						printf("Leu o nome %s\n", realFilePath);
+					char realFilePath[MAX_FILE_NAME_SIZE+ 1];
+					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) > 0) {
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
-							printf("Conseguiu buscar\n");
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
 						} else {
@@ -1343,12 +1346,14 @@ int ln2 (char *linkname, char *filename) {
 	// Link criado, agora temos que escrever o filename no arquivo
 	FILE2 handle = getFreeFileHandle();
 	if (handle >= 0 && handle < MAX_FILE_OPEN) {
+		openedFiles[handle].dirIndexPtr = dirIndexBlock;
 		openedFiles[handle].free = false;
 		openedFiles[handle].path = linkname;
 		openedFiles[handle].record = recordLink;
 		openedFiles[handle].pointer = 0;
-	
+
 		writeFile(handle, (BYTE*)filename, strlen(filename));
+		updateDirRecord(openedFiles[handle]);
 		openedFiles[handle].free = false;
 		return SUCCESS;
 	}
