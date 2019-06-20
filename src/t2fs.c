@@ -636,6 +636,7 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 			archiveToWrite.pointer += sizeToWrite;
 			sizeWritten += sizeToWrite;
 			archiveToWrite.record.byteFileSize += sizeToWrite;
+			size -= sizeWritten;
 		}
 
 		free(bufferDataBlock);
