@@ -744,7 +744,7 @@ int updateDirRecord(HANDLER toBeUpdated){
 			if(dataBlockPointer.valid == RECORD_REGULAR){
 				//Fetch bloco de dados
 				getDataBlockByPointer(bufferDataBlock,dataBlockPointer.blockPointer);
-				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator){
+				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator++){
 					 fetchedRecord = bufferToDIR_RECORD(bufferDataBlock,blockIterator * sizeof(DIR_RECORD));
 					 //Caso as strings sejam iguais, achou o record, logo atualiza ele na posição achada
 					 if(strcmp(fetchedRecord.name,toBeUpdated.record.name) == 0){
@@ -995,7 +995,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if(isFileOpened(handle)){
 		sizeWritten = writeFile(handle,buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
-		//updateDirRecord(openedFiles[handle]);
+		updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
 	}
 	
