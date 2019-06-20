@@ -7,6 +7,10 @@ teste/*
 exemplo/*
 !exemplo/*.*
 !exemplo/Makefile
+<<<<<<< HEAD
 exemplo/t2fs_disk.dat
 exemplo/t2fs_disk.dat
 *.dat
+=======
+exemplo/*.dat
+>>>>>>> ba4cac95a6f2d7933e0f9d9b51b32af44676b54d
