@@ -893,7 +893,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 		return ERROR;
 
 	if(isFileOpened(handle))
-		return
+		return writeFile(handle,buffer,size);
 	
 	return ERROR;
 }
