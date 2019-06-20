@@ -204,42 +204,43 @@ int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer){
 
 // WARNING: SE DER CORE DUMPED OLHE ESSA FUNCAO
 char **splitPath(char *name, int *size) {
-  int i = 0, n = 0;
+	int i = 0, n = 0;
+	char *nameCopy = malloc(strlen(name) + 1);
+  	strcpy(nameCopy, name);
+	// Conta ocorrencias
+	if (strlen(nameCopy) > 0 && nameCopy[0] != '/')
+		n++;
+	while (nameCopy[i] != '\0') {
+		if (nameCopy[i] == '/')
+			n++;
+		i++;
+	}
+	if (strlen(nameCopy) > 0 && nameCopy[strlen(nameCopy)-1] == '/') {
+		nameCopy[strlen(nameCopy)-1] = '\0';
+		n--;
+	}
+	
+	*size = n;
 
-  // Conta ocorrencias
-  if (strlen(name) > 0 && name[0] != '/')
-    n++;
-  while (name[i] != '\0') {
-    if (name[i] == '/')
-        n++;
-    i++;
-  }
-  if (strlen(name) > 0 && name[strlen(name)-1] == '/') {
-      name[strlen(name)-1] = '\0';
-      n--;
-  }
- 
-  *size = n;
-
-  i = 0;
-  char **strings;
-  strings = (char**)malloc(sizeof(char)*n);
-  char *substring;
-  char *nameCopy = strdup(name); // Necessaroi para strsep
-  while( (substring = strsep(&nameCopy,"/")) != NULL ) {
-    if (strlen(substring) > 0) {
-        strings[i] = (char*) malloc(sizeof(char)*FILE_NAME_SIZE);
-        strcpy(strings[i], substring);
-        i++;
-    }
-  }
-  *size = n;
-  if (*size == 1 && strings[0] == NULL) {
-    *size = 0;
-    free(strings);
-    return NULL;
-  }
-  return strings;
+	i = 0;
+	char **strings;
+	strings = (char**)malloc(sizeof(char)*n);
+	char *substring;
+	char *nameBuff = strdup(nameCopy); // Necessaroi para strsep
+	while( (substring = strsep(&nameBuff,"/")) != NULL ) {
+		if (strlen(substring) > 0) {
+			strings[i] = (char*) malloc(sizeof(char)*FILE_NAME_SIZE);
+			strcpy(strings[i], substring);
+			i++;
+		}
+	}
+	*size = n;
+	if (*size == 1 && strings[0] == NULL) {
+		*size = 0;
+		free(strings);
+		return NULL;
+	}
+	return strings;
 }
 
 int getRecordByName(DIR_RECORD *record, DWORD indexPointer, char *name) {
@@ -291,12 +292,21 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 	char **dirNames = splitPath(path, &size);
 	int i;
 	DIR_RECORD buffRecord;
-	for (i = 0; i < size; i++) {
-		if (getRecordByName(&buffRecord, indexPointer, dirNames[i]) == SUCCESS)
-			indexPointer = buffRecord.indexAddress;
-		else
-			return ((i == size-1) ? FILE_NOT_EXIST : PATH_INCORRECT);
+	if (path[0] == '/' && size == 0) {
+		//Root record
+		buffRecord.type = RECORD_DIR;
+		buffRecord.byteFileSize = 0;
+		buffRecord.indexAddress = 0;
+		strcpy(buffRecord.name, "/");
+	} else {
+		for (i = 0; i < size; i++) {
+			if (getRecordByName(&buffRecord, indexPointer, dirNames[i]) == SUCCESS)
+				indexPointer = buffRecord.indexAddress;
+			else
+				return ((i == size-1) ? FILE_NOT_EXIST : PATH_INCORRECT);
+		}
 	}
+	
 	// Encontrou o record que precisava
 	*record = buffRecord;
 	return SUCCESS;
@@ -314,7 +324,7 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 	DWORD dataBlockNumber = recordPointer / numberOfRecordsPerDataBlock;
 	// numero do bloco de indice que armazena o bloco de dados que contem o registro apontado por recordPointer
 	DWORD indexBlockNumber = (dataBlockNumber / (partInfo.numberOfPointers - 1)); 
-	
+
 	// Pegar o ponteiro do bloco de indice que o record esta
 	int i;
 	for (i = 0; i < indexBlockNumber; i++) {
@@ -330,11 +340,12 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 	getIndexBlockByPointer(indexBlock, indexPointer);
 	DWORD dataBlockPointer = dataBlockNumber % partInfo.numberOfPointers; 	// Nessa conta tem o -1 na numberOfPointer Ou nao??
 	bufferPointer = bufferToBLOCK_POINTER(indexBlock, dataBlockPointer * sizeof(bufferPointer));
-	if (bufferPointer.blockPointer == INVALID_BLOCK_PTR)
+	if (bufferPointer.valid == INVALID_BLOCK_PTR)
 		return ERROR;
 
 	bool dirRecordNotFound = true;
 	int recordIterator;
+
 	// Buscar pelos blocos de indice encadeados atras do registro valido
 	do {
 		// Pega o bloco de dados da busca atual e procura pelo registro valido dentro
