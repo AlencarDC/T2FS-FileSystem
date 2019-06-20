@@ -64,6 +64,14 @@ DWORD getFreeDataBlock() {
 	return ERROR;
 }
 
+DWORD freeDataBlock(DWORD dataBlockPointer){
+	return setBitmap(BITMAP_DATA,dataBlockPointer,1);
+}
+
+DWORD freeIndexBlock(DWORD indexBlockPointer){
+	return setBitmap(BITMAP_INDEX,indexBlockPointer,1);
+}
+
 bool createRootDir() {
 	BLOCK_POINTER rootPointer;
 	BYTE* indexBlockBuffer = malloc(partInfo.blockSize * SECTOR_SIZE);
