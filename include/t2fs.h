@@ -102,6 +102,9 @@ typedef struct {
 //Inicializa os handles de diretório
 void initDirHandles();
 
+//Escreve um bloco de indices apontado por pointer
+bool writeIndexBlockAt(DWORD pointer, BYTE *buffer)
+
 //Inicializa os handles de arquivo
 void initFileHandles();
 
