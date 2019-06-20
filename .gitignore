@@ -3,5 +3,7 @@ bin
 lib/libt2fs.a
 teste/*
 !teste/*.*
+!teste/Makefile
 exemplo/*
 !exemplo/*.*
+!exemplo/Makefile
