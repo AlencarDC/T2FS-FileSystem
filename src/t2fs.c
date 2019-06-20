@@ -1019,9 +1019,13 @@ FILE2 open2 (char *filename) {
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
 						} else {
+							printf("ERRO: Nao foi possivel encontrar o arquivo referenciado.");
+							openedFiles[handle].free = true;
 							return ERROR;
 						}
 					} else {
+						printf("ERRO: Nao possivel ler o endereco real\n");
+						openedFiles[handle].free = true;
 						return ERROR;
 					}
 				}
@@ -1323,13 +1327,13 @@ int ln2 (char *linkname, char *filename) {
 	char **pathLink = splitPath(linkname, &size);
 	DWORD dirIndexBlock;
 	char *lastSlash = strrchr(linkname, '/');
-	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+	if (lastSlash == linkname) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
 		dirIndexBlock = rootDirIndex;
 	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
 		dirIndexBlock = currentDirIndexPointer;
 	else { // O arquivo esta posicionado em algum local por ai
 		// Remover nome do arquivo do path e buscar o index block do local
-		int slashIndex = lastSlash - filename;
+		int slashIndex = lastSlash - linkname;
 		char *linkPath = malloc((slashIndex + 1) * sizeof(char));
 		memcpy(linkPath, linkname, slashIndex);
 		linkPath[slashIndex] = '\0';
@@ -1347,8 +1351,8 @@ int ln2 (char *linkname, char *filename) {
 		openedFiles[handle].path = linkname;
 		openedFiles[handle].record = recordLink;
 		openedFiles[handle].pointer = 0;
-		filename[strlen(filename)] = '\0';
-		writeFile(handle, (BYTE*)filename, strlen(filename) + 1);
+
+		writeFile(handle, (BYTE*)filename, strlen(filename));
 		updateDirRecord(openedFiles[handle]);
 		openedFiles[handle].free = false;
 		return SUCCESS;
