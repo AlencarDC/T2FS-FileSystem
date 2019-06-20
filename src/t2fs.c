@@ -469,7 +469,7 @@ DIR_RECORD createRecord(char *filename, BYTE type, DWORD dirIndexPointer) {
 	
 	//Fetch do bloco de indices do diretorio corrente
 	getIndexBlockByPointer(indexBlockBuffer,indexBlockPointer);
-	int numberOfDirRecords = partInfo.blockSize * SECTOR_SIZE / sizeof(DIR_RECORD);
+	int numberOfDirRecords = (partInfo.blockSize * SECTOR_SIZE) / sizeof(DIR_RECORD);
 	
 	while(!findEmptyEntry){
 		for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
@@ -565,9 +565,9 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 	currentIndexLevelBlkPointer = archiveToWrite.record.indexAddress;
 	while(!writeCompleted){
 		//Posiciona num bloco logico o ponteiro
-		logicBlockToWrite = archiveToWrite.pointer / partInfo.blockSize * SECTOR_SIZE;
+		logicBlockToWrite = archiveToWrite.pointer / (partInfo.blockSize * SECTOR_SIZE);
 		//Determina o offset dentro do bloco logico acima
-		offsetInBlock = archiveToWrite.pointer % partInfo.blockSize * SECTOR_SIZE;
+		offsetInBlock = archiveToWrite.pointer % (partInfo.blockSize * SECTOR_SIZE);
 		//Calcula o nível de indice necessário
 		DWORD indexLevelNeeded = logicBlockToWrite / (partInfo.numberOfPointers - 1);	
 		getIndexBlockByPointer(bufferIndexBlock,currentIndexLevelBlkPointer);
@@ -670,9 +670,9 @@ int readFile(FILE2 handle, BYTE *buffer, int size){
 	getIndexBlockByPointer(bufferIndexBlock,archiveToRead.record.indexAddress);
 	while(!readDone){
 		//Posiciona num bloco logico o ponteiro
-		logicBlockToRead = archiveToRead.pointer / partInfo.blockSize * SECTOR_SIZE;
+		logicBlockToRead = archiveToRead.pointer / (partInfo.blockSize * SECTOR_SIZE);
 		//Determina o offset dentro do bloco logico acima
-		offsetInBlock = archiveToRead.pointer % partInfo.blockSize * SECTOR_SIZE;
+		offsetInBlock = archiveToRead.pointer % (partInfo.blockSize * SECTOR_SIZE);
 		//Calcula o nível de indice necessário
 		DWORD indexLevelNeeded = logicBlockToRead / (partInfo.numberOfPointers - 1);
 		//Caso o nível de indice necessario para acessar seja maior que o nível acessado
@@ -732,7 +732,7 @@ int updateDirRecord(HANDLER toBeUpdated){
 
 	DIR_RECORD fetchedRecord;
 
-	int numberOfDirRecords = partInfo.blockSize * SECTOR_SIZE / sizeof(DIR_RECORD);
+	int numberOfDirRecords = (partInfo.blockSize * SECTOR_SIZE) / sizeof(DIR_RECORD);
 
 	while(!recordFound){
 		//Fetch bloco de indice
@@ -743,7 +743,7 @@ int updateDirRecord(HANDLER toBeUpdated){
 			if(dataBlockPointer.valid == RECORD_REGULAR){
 				//Fetch bloco de dados
 				getDataBlockByPointer(bufferDataBlock,dataBlockPointer.blockPointer);
-				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator){
+				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator++){
 					 fetchedRecord = bufferToDIR_RECORD(bufferDataBlock,blockIterator * sizeof(DIR_RECORD));
 					 //Caso as strings sejam iguais, achou o record, logo atualiza ele na posição achada
 					 if(strcmp(fetchedRecord.name,toBeUpdated.record.name) == 0){
@@ -1005,7 +1005,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if(isFileOpened(handle)){
 		sizeWritten = writeFile(handle,buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
-		//updateDirRecord(openedFiles[handle]);
+		updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
 	}
 	
