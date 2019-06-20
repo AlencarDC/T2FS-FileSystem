@@ -1004,7 +1004,11 @@ int closedir2 (DIR2 handle) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	return ERROR;
+	if (handle >= MAX_FILE_OPEN || handle < 0)
+		return ERROR;
+
+	openedDirs[handle].free = true;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
