@@ -1014,7 +1014,7 @@ FILE2 open2 (char *filename) {
 				// Se link, repetir abertura pro arquivo real
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
 					char realFilePath[MAX_FILE_NAME_SIZE+ 1];
-					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) > 0) {
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
@@ -1342,12 +1342,14 @@ int ln2 (char *linkname, char *filename) {
 	// Link criado, agora temos que escrever o filename no arquivo
 	FILE2 handle = getFreeFileHandle();
 	if (handle >= 0 && handle < MAX_FILE_OPEN) {
+		openedFiles[handle].dirIndexPtr = dirIndexBlock;
 		openedFiles[handle].free = false;
 		openedFiles[handle].path = linkname;
 		openedFiles[handle].record = recordLink;
 		openedFiles[handle].pointer = 0;
 		filename[strlen(filename)] = '\0';
 		writeFile(handle, (BYTE*)filename, strlen(filename) + 1);
+		updateDirRecord(openedFiles[handle]);
 		openedFiles[handle].free = false;
 		return SUCCESS;
 	}
