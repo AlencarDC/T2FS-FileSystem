@@ -775,7 +775,12 @@ int updateDirRecord(HANDLER toBeUpdated){
 Função:	Informa a identificação dos desenvolvedores do T2FS.
 -----------------------------------------------------------------------------*/
 int identify2 (char *name, int size) {
-	return -1;
+	char *brosNames = (char*) malloc(sizeof(char) * size);
+	strcpy(brosNames, "Alencar da Costa\t\t00288544\nMatheus Woeffel Camargo\t\t00288543\nRaphael Scherpinski Brandao\t00112233\n");	
+	if (strlen(brosNames) > size)
+		return ERROR;
+	name = brosNames;
+	return SUCCESS;
 }
 
 /*-----------------------------------------------------------------------------
