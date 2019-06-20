@@ -347,6 +347,7 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 	//Pegar bloco de indice e endereco pro bloco de dados que esta o registro
 	getIndexBlockByPointer(indexBlock, indexPointer);
 	DWORD dataBlockPointer = dataBlockNumber % partInfo.numberOfPointers; 	// Nessa conta tem o -1 na numberOfPointer Ou nao??
+	recordPointer -= dataBlockNumber * numberOfRecordsPerDataBlock; //Deslocamento relativo ao bloco de dados visto
 	bufferPointer = bufferToBLOCK_POINTER(indexBlock, dataBlockPointer * sizeof(bufferPointer));
 	if (bufferPointer.valid == INVALID_BLOCK_PTR)
 		return ERROR;
