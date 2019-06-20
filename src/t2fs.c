@@ -881,13 +881,11 @@ FILE2 open2 (char *filename) {
 				openedFiles[handle].pointer = 0;
 				// Se link, repetir abertura pro arquivo real
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
-					BYTE *realFilePath;
-					if (readFile(handle, realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+					char *realFilePath;
+					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
-							openedFiles[handle].free = false;
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
-							openedFiles[handle].pointer = 0;
 						} else {
 							printf("ERRO: Nao foi possivel encontrar o arquivo referenciado.");
 							return ERROR;
@@ -897,6 +895,16 @@ FILE2 open2 (char *filename) {
 						return ERROR;
 					}
 				}
+				// Remover nome do arquivo do path e buscar o index block do local
+				char *lastSlash = strrchr(openedFiles[handle].path, '/');
+				int slashIndex = lastSlash - openedFiles[handle].path;
+				char *filePath = malloc((slashIndex + 1) * sizeof(char));
+				memcpy(filePath, openedFiles[handle].path, slashIndex);
+				filePath[slashIndex] = '\0';
+				getRecordByPath(&dirRecord, filePath);
+				free(filePath);
+
+				openedFiles[handle].dirIndexPtr = dirRecord.indexAddress;
 				return handle;
 			}
 		}
@@ -1200,7 +1208,7 @@ int ln2 (char *linkname, char *filename) {
 		openedFiles[handle].record = recordLink;
 		openedFiles[handle].pointer = 0;
 		filename[strlen(filename)] = '\0';
-		writeFile(handle, filename, strlen(filename) + 1);
+		writeFile(handle, (BYTE*)filename, strlen(filename) + 1);
 		openedFiles[handle].free = false;
 	}
 	printf("ERRO: Nao foi possivel terminar a criacao do link. Link incompleto\n");
