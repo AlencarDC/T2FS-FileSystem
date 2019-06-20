@@ -1007,7 +1007,8 @@ FILE2 open2 (char *filename) {
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
 					printf("Entrou para LINK\n");
 					char *realFilePath;
-					if (readFile(handle, (BYTE*)&realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+					int k;
+					if ((k = readFile(handle, (BYTE*)&realFilePath, MAX_FILE_NAME_SIZE + 1)) == SUCCESS) {
 						printf("Passou na leitura\n");
 						printf("Leu o nome %s\n", realFilePath);
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
@@ -1321,13 +1322,13 @@ int ln2 (char *linkname, char *filename) {
 	char **pathLink = splitPath(linkname, &size);
 	DWORD dirIndexBlock;
 	char *lastSlash = strrchr(linkname, '/');
-	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+	if (lastSlash == linkname) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
 		dirIndexBlock = rootDirIndex;
 	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
 		dirIndexBlock = currentDirIndexPointer;
 	else { // O arquivo esta posicionado em algum local por ai
 		// Remover nome do arquivo do path e buscar o index block do local
-		int slashIndex = lastSlash - filename;
+		int slashIndex = lastSlash - linkname;
 		char *linkPath = malloc((slashIndex + 1) * sizeof(char));
 		memcpy(linkPath, linkname, slashIndex);
 		linkPath[slashIndex] = '\0';
@@ -1344,8 +1345,8 @@ int ln2 (char *linkname, char *filename) {
 		openedFiles[handle].path = linkname;
 		openedFiles[handle].record = recordLink;
 		openedFiles[handle].pointer = 0;
-		filename[strlen(filename)] = '\0';
-		writeFile(handle, (BYTE*)filename, strlen(filename) + 1);
+	
+		writeFile(handle, (BYTE*)filename, strlen(filename));
 		openedFiles[handle].free = false;
 		return SUCCESS;
 	}
