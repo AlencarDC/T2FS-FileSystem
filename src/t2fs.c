@@ -725,8 +725,48 @@ int readFile(FILE2 handle, BYTE *buffer, int size){
 }
 
 int updateDirRecord(HANDLER toBeUpdated){
-	
+	bool recordFound = false;
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	DWORD acessedDirIndexPtr = toBeUpdated.dirIndexPtr;
+	BLOCK_POINTER dataBlockPointer, indexBlockPointer;
+	int indexIterator, blockIterator;
 
+	DIR_RECORD fetchedRecord;
+
+	int numberOfDirRecords = partInfo.blockSize * SECTOR_SIZE / sizeof(DIR_RECORD);
+
+	while(!recordFound){
+		//Fetch bloco de indice
+		getIndexBlockByPointer(bufferIndexBlock,acessedDirIndexPtr);
+		//Percorre os ponteiros simples de bloco
+		for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
+			dataBlockPointer = bufferToBLOCK_POINTER(bufferIndexBlock,indexIterator * sizeof(BLOCK_POINTER));
+			if(dataBlockPointer.valid == RECORD_REGULAR){
+				//Fetch bloco de dados
+				getDataBlockByPointer(bufferDataBlock,dataBlockPointer.blockPointer);
+				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator){
+					 fetchedRecord = bufferToDIR_RECORD(bufferDataBlock,blockIterator * sizeof(DIR_RECORD));
+					 //Caso as strings sejam iguais, achou o record, logo atualiza ele na posição achada
+					 if(strcmp(fetchedRecord.name,toBeUpdated.record.name) == 0){
+						 insertDirEntryAt(bufferDataBlock,toBeUpdated.record,blockIterator);
+						 writeDataBlockAt(dataBlockPointer.blockPointer,bufferDataBlock);
+						 free(bufferDataBlock);
+						 free(bufferIndexBlock);
+						 return SUCCESS;
+					 }
+				}
+			}
+		}
+		//Pega ponteiro para proximo bloco de indice
+		indexBlockPointer = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) * indexIterator);
+		if(indexBlockPointer.valid == INVALID_BLOCK_PTR){
+			free(bufferDataBlock);
+			free(bufferIndexBlock);
+			return ERROR;
+		}
+		acessedDirIndexPtr = indexBlockPointer.blockPointer;
+	}
 }
 
 /********************************************************************************/
@@ -931,7 +971,8 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if(isFileOpened(handle)){
 		sizeWritten = writeFile(handle,buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
-
+		updateDirRecord(openedFiles[handle]);
+		return sizeWritten;
 	}
 	
 	return ERROR;
