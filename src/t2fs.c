@@ -637,10 +637,12 @@ int writeFile(FILE2 handle, BYTE *buffer, int size){
 			bufferIndex += sizeToWrite;
 			archiveToWrite.pointer += sizeToWrite;
 			sizeWritten += sizeToWrite;
+			archiveToWrite.record.byteFileSize += sizeToWrite;
 		}
 
 		free(bufferDataBlock);
 		free(bufferIndexBlock);
+		openedFiles[handle] = archiveToWrite;
 		return sizeWritten;
 
 	

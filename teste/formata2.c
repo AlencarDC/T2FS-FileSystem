@@ -11,6 +11,8 @@ int main() {
     create2("/alencarEmatheus");
 
     write2(file1,amor,40);
+    seek2(file1, 0);
     read2(file1,lido,40);
+    printf("%s", lido);
     return 0;
 }
