@@ -944,9 +944,13 @@ FILE2 open2 (char *filename) {
 				openedFiles[handle].pointer = 0;
 				// Se link, repetir abertura pro arquivo real
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
+					printf("Entrou para LINK\n");
 					char *realFilePath;
-					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+					if (readFile(handle, (BYTE*)&realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+						printf("Passou na leitura\n");
+						printf("Leu o nome %s\n", realFilePath);
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
+							printf("Conseguiu buscar\n");
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
 						} else {
@@ -1280,6 +1284,7 @@ int ln2 (char *linkname, char *filename) {
 		filename[strlen(filename)] = '\0';
 		writeFile(handle, (BYTE*)filename, strlen(filename) + 1);
 		openedFiles[handle].free = false;
+		return SUCCESS;
 	}
 	printf("ERRO: Nao foi possivel terminar a criacao do link. Link incompleto\n");
 	return ERROR;
