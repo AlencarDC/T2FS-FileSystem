@@ -995,7 +995,7 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if(isFileOpened(handle)){
 		sizeWritten = writeFile(handle,buffer,size);
 		//Confirma alteração do tamanho do record no diretorio
-		updateDirRecord(openedFiles[handle]);
+		//updateDirRecord(openedFiles[handle]);
 		return sizeWritten;
 	}
 	
