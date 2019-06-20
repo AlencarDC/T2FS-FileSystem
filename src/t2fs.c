@@ -774,6 +774,67 @@ int updateDirRecord(HANDLER toBeUpdated){
 	}
 }
 
+int createNavigationReferences(DWORD createdDirIndexPtr, DWORD parentDirIndexPtr){
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BLOCK_POINTER newDataBlockPtr, fetchedPtr;
+	DIR_RECORD parentRecord;
+	DIR_RECORD currentRecord;
+
+	//Criação do Record Pai
+	strcpy(parentRecord.name, "..\0");
+	parentRecord.type = RECORD_DIR;
+	parentRecord.indexAddress = parentDirIndexPtr;
+	parentRecord.byteFileSize = 0;
+
+	//Criação do Record Corrente
+	strcpy(currentRecord.name, ".\0");
+	currentRecord.type = RECORD_DIR;
+	currentRecord.indexAddress = createdDirIndexPtr;
+	currentRecord.byteFileSize = 0;
+	
+	//Fetch do bloco de indice do diretorio criado
+	getIndexBlockByPointer(bufferIndexBlock,createdDirIndexPtr);
+	fetchedPtr = bufferToBLOCK_POINTER(bufferIndexBlock, 0);
+	if(fetchedPtr.valid == RECORD_REGULAR){ //Caso já haja um bloco alocado
+		//Fetch bloco e inserção dos dirRecords + escrita no disco
+		getDataBlockByPointer(bufferDataBlock, fetchedPtr.blockPointer);
+		insertDirEntryAt(bufferDataBlock,parentRecord,0);
+		insertDirEntryAt(bufferDataBlock,currentRecord,1);
+		writeDataBlockAt(fetchedPtr.blockPointer,bufferDataBlock);
+		
+		free(bufferDataBlock);
+		free(bufferIndexBlock);
+		return SUCCESS;
+
+	}else{
+		newDataBlockPtr.blockPointer = getFreeDataBlock();
+		if(newDataBlockPtr.blockPointer < 0){ //Não há bloco de dados disponível
+			free(bufferDataBlock);
+			free(bufferIndexBlock);
+			return ERROR;
+		}
+		else{//newDataBlockPtr.blockpointer >= 0 (válido)
+			//Torna o ponteiro válido
+			newDataBlockPtr.valid = RECORD_REGULAR;
+			
+			//Fetch bloco de dados e escrita dos dir records + escrita em disco
+			getDataBlockByPointer(bufferDataBlock,newDataBlockPtr.blockPointer);
+			insertDirEntryAt(bufferDataBlock,parentRecord,0);
+			insertDirEntryAt(bufferDataBlock,currentRecord,1);
+			writeDataBlockAt(newDataBlockPtr.blockPointer,bufferDataBlock);
+			
+			//Faz encadeamento com novo bloco alocado e escreve alterações no disco
+			insertBlockPointerAt(bufferIndexBlock,newDataBlockPtr, 0);
+			writeIndexBlockAt(createdDirIndexPtr,bufferIndexBlock);
+
+			free(bufferDataBlock);
+			free(bufferIndexBlock);
+			return SUCCESS;
+		}
+	}
+}
+
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
