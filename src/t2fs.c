@@ -724,6 +724,11 @@ int readFile(FILE2 handle, BYTE *buffer, int size){
 		
 }
 
+int updateDirRecord(HANDLER toBeUpdated){
+	
+
+}
+
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
@@ -843,6 +848,7 @@ FILE2 create2 (char *filename) {
 	openedFiles[handle].path = filename;
 	openedFiles[handle].record = record;
 	openedFiles[handle].pointer = 0;
+	openedFiles[handle].dirIndexPtr = dirIndexBlock;
 	return handle;
 }
 
@@ -859,6 +865,7 @@ int delete2 (char *filename) {
 /*-----------------------------------------------------------------------------
 Função:	Função que abre um arquivo existente no disco.
 -----------------------------------------------------------------------------*/
+//To do: correção para incluir no handle do arquivo aberto o parentDir
 FILE2 open2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
@@ -917,11 +924,15 @@ Função:	Função usada para realizar a escrita de uma certa quantidade
 		de bytes (size) de  um arquivo.
 -----------------------------------------------------------------------------*/
 int write2 (FILE2 handle, char *buffer, int size) {
+	DWORD sizeWritten;
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	if(isFileOpened(handle))
-		return writeFile(handle,buffer,size);
+	if(isFileOpened(handle)){
+		sizeWritten = writeFile(handle,buffer,size);
+		//Confirma alteração do tamanho do record no diretorio
+
+	}
 	
 	return ERROR;
 }
