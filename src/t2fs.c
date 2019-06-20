@@ -16,7 +16,7 @@
 /********************************************************************************/
 bool initialized = false;	// Estado do sistema de arquivos: inicializado ou nao para correto funcionamento
 
-char *currentPath;	// Caminho corrente do sistema de arquivos
+char currentPath[MAX_FILE_NAME_SIZE];	// Caminho corrente do sistema de arquivos
 DWORD currentDirIndexPointer = -1; // Ponteiro de bloco de indice de diretorio associado ao caminho corrente
 DWORD rootDirIndex = -1; // Numero/endereco do Bloco de indice da raiz
 
@@ -172,7 +172,7 @@ int getBlockByPointer(BYTE *block,DWORD pointer, DWORD offset, int blockSize){
 	for(i = 0; i < blockSize;i++){
 		//Faz leitura e verifica se houve erro ao ler, se sim, aborta e retorna cod erro.
 		if (read_sector(initialSector + i,sectorBuffer) != 0){
-			printf("Erro ao ler setor ao preencher bloco");
+			printf("Erro ao ler setor ao preencher bloco\n");
 			return SECTOR_ERROR;
 		}
 		//Copia setor para block
@@ -444,7 +444,7 @@ void initFileHandles(){
 
 bool initRootDir() {
 	if (getBitmap(BITMAP_INDEX, 0) == 0) {
-		currentPath = "/";
+		strcpy(currentPath, "/");
 		currentDirIndexPointer = 0;
 		rootDirIndex = 0;
 		return true;
@@ -1201,8 +1201,17 @@ Função:	Função usada para alterar o CP (current path)
 int chdir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
-		
-
+	
+	DIR_RECORD record;
+	int recordByPath = getRecordByPath(&record, pathname);
+	if (recordByPath == SUCCESS) {
+		if (record.type == RECORD_DIR) {
+			strcpy(currentPath, pathname);
+			currentDirIndexPointer = record.indexAddress;
+			return SUCCESS;
+		}
+	}
+	printf("ERRO: O caminho especificado nao foi encontrado.\n");
 	return ERROR;
 }
 
