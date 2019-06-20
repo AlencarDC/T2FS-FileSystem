@@ -1013,21 +1013,15 @@ FILE2 open2 (char *filename) {
 				openedFiles[handle].pointer = 0;
 				// Se link, repetir abertura pro arquivo real
 				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
-					printf("Entrou para LINK\n");
-					char *realFilePath;
-					if (readFile(handle, (BYTE*)&realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
-						printf("Passou na leitura\n");
-						printf("Leu o nome %s\n", realFilePath);
+					char realFilePath[MAX_FILE_NAME_SIZE+ 1];
+					if (readFile(handle, (BYTE*)realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
 						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
-							printf("Conseguiu buscar\n");
 							openedFiles[handle].path = realFilePath;
 							openedFiles[handle].record = dirRecord;
 						} else {
-							printf("ERRO: Nao foi possivel encontrar o arquivo referenciado.");
 							return ERROR;
 						}
 					} else {
-						printf("ERRO: Nao possivel ler o endereco real\n");
 						return ERROR;
 					}
 				}
