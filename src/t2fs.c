@@ -529,83 +529,175 @@ bool isDirOpened(DIR2 handle) {
 	return (handle >= 0 && openedDirs[handle].free == false);
 }
 
+int writeFile(FILE2 handle, BYTE *buffer, int size){
+	HANDLER archiveToWrite;
+	BYTE *bufferDataBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	BYTE *bufferIndexBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
+	DWORD logicBlockToWrite, offsetInBlock, currentIndexLevel, currentIndexLevelBlkPointer, offsetInCurrentIndex;
+	DWORD sizeWritten;
+	DWORD bufferIndex;
+	bool writeCompleted = false;
+	int i;
+	bufferIndex = 0;
+	currentIndexLevel = 0;
+	
+	archiveToWrite = openedFiles[handle];
+	currentIndexLevelBlkPointer = archiveToWrite.record.indexAddress;
+	while(!writeCompleted){
+		//Posiciona num bloco logico o ponteiro
+		logicBlockToWrite = archiveToWrite.pointer / partInfo.blockSize * SECTOR_SIZE;
+		//Determina o offset dentro do bloco logico acima
+		offsetInBlock = archiveToWrite.pointer % partInfo.blockSize * SECTOR_SIZE;
+		//Calcula o nível de indice necessário
+		DWORD indexLevelNeeded = logicBlockToWrite / partInfo.numberOfPointers - 1;
+				
+		getIndexBlockByPointer(bufferIndexBlock,currentIndexLevelBlkPointer);
+		while(currentIndexLevel < indexLevelNeeded){
+			currentIndexLevel++;
+			BLOCK_POINTER nextIndex = bufferToBLOCK_POINTER(bufferIndexBlock, (partInfo.numberOfPointers - 1) * sizeof(BLOCK_POINTER));
+			if(nextIndex.valid == RECORD_REGULAR){
+				getIndexBlockByPointer(bufferIndexBlock,nextIndex.blockPointer);
+				currentIndexLevelBlkPointer= nextIndex.blockPointer;
+			}else{//O bloco de indice n é válido
+				BLOCK_POINTER dataBlockPointer;
+				//Percorre os ponteiros verificando se um bloco de dados foi alocado, se n, aloca.
+				for(i = 0; i < partInfo.numberOfPointers - 1; i++){
+					dataBlockPointer = bufferToBLOCK_POINTER(bufferIndexBlock,i * sizeof(BLOCK_POINTER));
+					if(dataBlockPointer.valid == RECORD_INVALID){
+						DWORD newDataBlock = getFreeDataBlock();
+						BLOCK_POINTER newBlockPointer;
+						newBlockPointer.blockPointer = newDataBlock;
+						newBlockPointer.valid = RECORD_REGULAR;
+						insertBlockPointerAt(bufferIndexBlock,newBlockPointer,i);
+						}
+					}
+				BLOCK_POINTER newBlockPointer;
+				DWORD newIndexBlk = getFreeIndexBlock();
+				newBlockPointer.valid = RECORD_REGULAR;
+				newBlockPointer.blockPointer = newIndexBlk;
+				insertBlockPointerAt(bufferIndexBlock,newBlockPointer,partInfo.numberOfPointers -1);
+				writeIndexBlockAt(currentIndexLevelBlkPointer,bufferIndexBlock);
+				currentIndexLevelBlkPointer = newBlockPointer.blockPointer;
+				getIndexBlockByPointer(bufferIndexBlock,currentIndexLevelBlkPointer);
+				}
+			}
+
+			//Tradução do bloco lógico para o offset no nivel corrente
+			offsetInCurrentIndex = logicBlockToWrite - (currentIndexLevel * (partInfo.numberOfPointers - 1));
+			//Fetch do ponteiro pra bloco do bloco de dados onde os dados serão escritos
+			BLOCK_POINTER blockToWritePtr = bufferToBLOCK_POINTER(bufferIndexBlock,offsetInCurrentIndex);
+			//Caso seja um ponteiro invalido, o bloco n foi alocado. Devemos alocar antes de fazer a escrita
+			if(blockToWritePtr.valid == INVALID_BLOCK_PTR){
+				BLOCK_POINTER newDataBlock;
+				newDataBlock.blockPointer = getFreeDataBlock();
+				newDataBlock.valid = RECORD_REGULAR;
+				insertBlockPointerAt(bufferIndexBlock,newDataBlock,offsetInCurrentIndex);
+				writeIndexBlockAt(currentIndexLevelBlkPointer, bufferIndexBlock);
+				blockToWritePtr = newDataBlock;
+			}
+			getDataBlockByPointer(bufferDataBlock,blockToWritePtr.blockPointer);
+			//Calculo do número de bytes que conseguimos escrever desse bloco
+			DWORD remainingBytes = partInfo.blockSize * SECTOR_SIZE - offsetInBlock + 1;
+			DWORD sizeToWrite;
+			//Caso remainingBytes seja maior que o tamanho da escrita, conseguimos escrever td
+			if(remainingBytes >= size){
+				writeCompleted = true;
+				sizeToWrite = size;
+			}else//remaining_bytes < size (Escrevemos o que da)
+				sizeToWrite = remainingBytes;
+				
+			//Copia o buffer de entradas para o buffer do bloco de dados
+			for(i = 0; i < sizeToWrite; i++){
+				bufferDataBlock[offsetInBlock + i] = buffer[bufferIndex + i];
+			}
+			//Escreve o bloco de dados no disco
+			writeDataBlockAt(blockToWritePtr.blockPointer, bufferDataBlock);
+			bufferIndex += sizeToWrite;
+			archiveToWrite.pointer += sizeToWrite;
+			sizeWritten += sizeToWrite;
+		}
+
+		free(bufferDataBlock);
+		free(bufferIndexBlock);
+		return sizeWritten;
+
+	
+
+	return ERROR;
+}
+
 
 int readFile(FILE2 handle, BYTE *buffer, int size){
 	bool readDone = false;
 	BYTE *bufferDataBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
 	BYTE *bufferIndexBlock = malloc(sizeof(SECTOR_SIZE * partInfo.blockSize));
 	HANDLER archiveToRead;
-	DWORD logicBlockToRead;
+	DWORD logicBlockToRead, offsetInCurrentIndex;
 	DWORD bufferPointer = 0;
 	DWORD offsetInBlock;
 	DWORD nBytesRead = 0;
 	int i;
 
-	if(isFileOpened(handle)){
-		archiveToRead = openedFiles[handle];
-		//Caso o tamanho da leitura vá passar do tamanho do arquivo
-		if(archiveToRead.pointer + size > archiveToRead.record.byteFileSize){
-			size = archiveToRead.record.byteFileSize - archiveToRead.pointer;
+	archiveToRead = openedFiles[handle];
+	//Caso o tamanho da leitura vá passar do tamanho do arquivo
+	if(archiveToRead.pointer + size > archiveToRead.record.byteFileSize){
+		size = archiveToRead.record.byteFileSize - archiveToRead.pointer;
+	}
+	//Fetch do bloco de indice (começa em 0)
+	DWORD currentIndexLevel = 0; 
+	getIndexBlockByPointer(bufferIndexBlock,archiveToRead.record.indexAddress);
+	while(!readDone){
+		//Posiciona num bloco logico o ponteiro
+		logicBlockToRead = archiveToRead.pointer / partInfo.blockSize * SECTOR_SIZE;
+		//Determina o offset dentro do bloco logico acima
+		offsetInBlock = archiveToRead.pointer % partInfo.blockSize * SECTOR_SIZE;
+		//Calcula o nível de indice necessário
+		DWORD indexLevelNeeded = logicBlockToRead / partInfo.numberOfPointers - 1;
+		//Caso o nível de indice necessario para acessar seja maior que o nível acessado
+		if(indexLevelNeeded > currentIndexLevel){
+			//Itera sobre os níveis de indice até achar o correto
+			while (currentIndexLevel < indexLevelNeeded){
+				currentIndexLevel++;
+				DWORD nextIndex = bufferToBLOCK_POINTER(bufferIndexBlock, (partInfo.numberOfPointers - 1) * sizeof(BLOCK_POINTER)).blockPointer;
+				getIndexBlockByPointer(bufferIndexBlock,nextIndex);
+			}
 		}
-		//Fetch do bloco de indice (começa em 0)
-		DWORD currentIndexLevel = 0; 
-		getIndexBlockByPointer(bufferIndexBlock,archiveToRead.record.indexAddress);
-		while(!readDone){
-			//Posiciona num bloco logico o ponteiro
-			logicBlockToRead = archiveToRead.pointer / partInfo.blockSize * SECTOR_SIZE;
-			//Determina o offset dentro do bloco logico acima
-			offsetInBlock = archiveToRead.pointer % partInfo.blockSize * SECTOR_SIZE;
-			//Calcula o nível de indice necessário
-			DWORD indexLevelNeeded = logicBlockToRead / partInfo.numberOfPointers - 1;
-			//Caso o nível de indice necessario para acessar seja maior que o nível acessado
-			if(indexLevelNeeded > currentIndexLevel){
-				//Itera sobre os níveis de indice até achar o correto
-				while (currentIndexLevel < indexLevelNeeded){
-					currentIndexLevel++;
-					DWORD nextIndex = bufferToBLOCK_POINTER(bufferIndexBlock, (partInfo.numberOfPointers - 1) * sizeof(BLOCK_POINTER)).blockPointer;
-					getIndexBlockByPointer(bufferIndexBlock,nextIndex);
-				}
+		//Tradução do bloco lógico para o offset no nivel corrente
+		offsetInCurrentIndex = logicBlockToRead - (currentIndexLevel * (partInfo.numberOfPointers - 1));
+		//Tradução do bloco lógico para físico
+		DWORD realBlockToRead = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) *offsetInCurrentIndex).blockPointer;
+		//Leitura do bloco físico
+		getDataBlockByPointer(bufferDataBlock,realBlockToRead);
+		//Calculo do número de bytes que conseguimos ler desse bloco
+		DWORD remainingBytes = partInfo.blockSize * SECTOR_SIZE - offsetInBlock + 1;
+		//Caso seja >= size então a leitura acabou
+		if(remainingBytes >= size){
+			nBytesRead+= size;//Conseguiu ler size bytes
+			readDone = true;
+			//Copia os dados pro buffer
+			for(i = 0; i < size; i++){
+				buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
 			}
-			//Tradução do bloco lógico para físico
-			DWORD realBlockToRead = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) *logicBlockToRead).blockPointer;
-			//Leitura do bloco físico
-			getDataBlockByPointer(bufferDataBlock,realBlockToRead);
-			//Calculo do número de bytes que conseguimos ler desse bloco
-			DWORD remainingBytes = partInfo.blockSize * SECTOR_SIZE - offsetInBlock + 1;
-			//Caso seja >= size então a leitura acabou
-			if(remainingBytes >= size){
-				nBytesRead+= size;//Conseguiu ler size bytes
-				readDone = true;
-				//Copia os dados pro buffer
-				for(i = 0; i < size; i++){
-					buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
-				}
-				archiveToRead.pointer += size;//Posiciona ponteiro para proximo byte apos leitura
+			archiveToRead.pointer += size;//Posiciona ponteiro para proximo byte apos leitura
+		}
+		else{//remaining_bytes < size
+			nBytesRead += remainingBytes;
+			readDone = false;
+			//Copia dados pro buffer
+			for(i = 0; i < remainingBytes; i++){
+				buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
 			}
-			else{//remaining_bytes < size
-				nBytesRead += remainingBytes;
-				readDone = false;
-				//Copia dados pro buffer
-				for(i = 0; i < remainingBytes; i++){
-					buffer[bufferPointer + i] = bufferDataBlock[offsetInBlock + i];
-				}
-				bufferPointer += remainingBytes; //Reposiciona bufferPointer
-				archiveToRead.pointer += remainingBytes; //Reposiciona pointer do arquivo para o proximo dado a ser lido.
-				size -= remainingBytes; //Tamanho a ser lido diminuido do que foi lido
-			}
+			bufferPointer += remainingBytes; //Reposiciona bufferPointer
+			archiveToRead.pointer += remainingBytes; //Reposiciona pointer do arquivo para o proximo dado a ser lido.
+			size -= remainingBytes; //Tamanho a ser lido diminuido do que foi lido
+		}
 
-		}
-		free(bufferIndexBlock);
-		free(bufferDataBlock);
-		openedFiles[handle] = archiveToRead;	//Atualiza o handle
-		return nBytesRead;
+	}
+	free(bufferIndexBlock);
+	free(bufferDataBlock);
+	openedFiles[handle] = archiveToRead;	//Atualiza o handle
+	return nBytesRead;
 		
-	}
-	else{
-		free(bufferIndexBlock);
-		free(bufferDataBlock);
-		return ERROR;	
-	}
 }
 
 /********************************************************************************/
@@ -787,7 +879,7 @@ int read2 (FILE2 handle, char *buffer, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	if (isFileOpened(handle) == true) 
+	if (isFileOpened(handle)) 
 		return readFile(handle, (BYTE *)buffer, size);
 	return ERROR;
 }
@@ -800,6 +892,9 @@ int write2 (FILE2 handle, char *buffer, int size) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	if(isFileOpened(handle))
+		return
+	
 	return ERROR;
 }
 
