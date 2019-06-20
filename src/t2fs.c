@@ -76,13 +76,13 @@ bool createRootDir() {
 			DWORD freeDataBlock = getFreeDataBlock();
 			printf("freeDataBlock %d\n", freeDataBlock);
 			if (freeDataBlock >= 0) {
-				getIndexBlockByPointer(indexBlockBuffer,freeIndexBlock);
+				getIndexBlockByPointer(indexBlockBuffer, freeIndexBlock);
 				rootPointer.valid = RECORD_REGULAR;
 				rootPointer.blockPointer = freeDataBlock;
-				insertBlockPointerAt(indexBlockBuffer,rootPointer,0);
-				writeIndexBlockAt(freeIndexBlock,indexBlockBuffer);
-				//createRecord("..", RECORD_DIR);
-				//createRecord(".", RECORD_DIR);
+				insertBlockPointerAt(indexBlockBuffer, rootPointer,0);
+				writeIndexBlockAt(freeIndexBlock, indexBlockBuffer);
+				//createRecord("..", RECORD_DIR, );
+				//createRecord(".", RECORD_DIR, );
 				initRootDir();
 				free(indexBlockBuffer);
 
@@ -872,7 +872,24 @@ FILE2 open2 (char *filename) {
 				openedFiles[handle].path = filename;
 				openedFiles[handle].record = dirRecord;
 				openedFiles[handle].pointer = 0;
-
+				// Se link, repetir abertura pro arquivo real
+				if (dirRecord.type == RECORD_LINK) { //Buscar arquivo real
+					BYTE *realFilePath;
+					if (readFile(handle, realFilePath, MAX_FILE_NAME_SIZE + 1) == SUCCESS) {
+						if (getRecordByPath(&dirRecord, realFilePath) == SUCCESS && dirRecord.type == RECORD_REGULAR) {
+							openedFiles[handle].free = false;
+							openedFiles[handle].path = realFilePath;
+							openedFiles[handle].record = dirRecord;
+							openedFiles[handle].pointer = 0;
+						} else {
+							printf("ERRO: Nao foi possivel encontrar o arquivo referenciado.");
+							return ERROR;
+						}
+					} else {
+						printf("ERRO: Nao possivel ler o endereco real\n");
+						return ERROR;
+					}
+				}
 				return handle;
 			}
 		}
@@ -1122,6 +1139,60 @@ int ln2 (char *linkname, char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	DIR_RECORD recordFile, recordLink;
+	int recordByPathLink = getRecordByPath(&recordLink, linkname);
+	int recordByPathFile = getRecordByPath(&recordFile, filename);
+	// Verifica se o arquivo para o qual queremos o link existe
+	if (recordByPathFile == PATH_INCORRECT || recordByPathFile == FILE_NOT_EXIST) {
+		printf("ERRO: O caminho \"%s\" nao existe.\n", filename);
+		return ERROR;
+	} else if (recordByPathFile == SUCCESS && recordFile.type == RECORD_DIR) {
+		printf("ERRRO: Nao eh possivel criar links para diretorios.\n");
+		return ERROR;
+	}
+	// Verificacao do caminho do link
+	if (recordByPathLink != FILE_NOT_EXIST) {
+		if (recordByPathLink == PATH_INCORRECT)
+			printf("ERRO: O caminho \"%s\" nao existe.\n", linkname);
+		else if (recordByPathLink == SUCCESS)// Ha um arquivo com o mesmo nome nesse path
+			printf("ERRRO: Ja existe um arquivo/diretorio/link com esse mesmo nome no caminho fornecido.\n");
+
+		return ERROR;
+	}
+
+	// Tudo pronto para iniciar a criacao do link
+	int size;
+	char **pathLink = splitPath(linkname, &size);
+	DWORD dirIndexBlock;
+	char *lastSlash = strrchr(linkname, '/');
+	if (lastSlash == filename) // A ultima / esta na primeira posicao, ou seja eh a unica. Caminho absoluto para raiz
+		dirIndexBlock = rootDirIndex;
+	else if (lastSlash == NULL) // Nao ha / no nome entao o arquivo sera criado no diretorio corrente
+		dirIndexBlock = currentDirIndexPointer;
+	else { // O arquivo esta posicionado em algum local por ai
+		// Remover nome do arquivo do path e buscar o index block do local
+		int slashIndex = lastSlash - filename;
+		char *linkPath = malloc((slashIndex + 1) * sizeof(char));
+		memcpy(linkPath, linkname, slashIndex);
+		linkPath[slashIndex] = '\0';
+		getRecordByPath(&recordLink, linkPath);
+		dirIndexBlock = recordLink.indexAddress;
+		free(linkPath);
+	}
+	// Criacao do link no disco
+	recordLink = createRecord(pathLink[size-1], RECORD_LINK, dirIndexBlock);
+	// Link criado, agora temos que escrever o filename no arquivo
+	FILE2 handle = getFreeFileHandle();
+	if (handle >= 0 && handle < MAX_FILE_OPEN) {
+		openedFiles[handle].free = false;
+		openedFiles[handle].path = linkname;
+		openedFiles[handle].record = recordLink;
+		openedFiles[handle].pointer = 0;
+		filename[strlen(filename)] = '\0';
+		writeFile(handle, filename, strlen(filename) + 1);
+		openedFiles[handle].free = false;
+	}
+	printf("ERRO: Nao foi possivel terminar a criacao do link. Link incompleto\n");
 	return ERROR;
 }
 
