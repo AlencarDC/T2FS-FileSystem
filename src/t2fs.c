@@ -65,6 +65,8 @@ DWORD getFreeDataBlock() {
 }
 
 bool createRootDir() {
+	BLOCK_POINTER rootPointer;
+	BYTE* indexBlockBuffer = malloc(partInfo.blockSize * SECTOR_SIZE);
 	// Espera-se que essa funcao seja chamada logo apos uma formatacao
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
@@ -74,15 +76,22 @@ bool createRootDir() {
 			DWORD freeDataBlock = getFreeDataBlock();
 			printf("freeDataBlock %d\n", freeDataBlock);
 			if (freeDataBlock >= 0) {
+				getIndexBlockByPointer(indexBlockBuffer,freeIndexBlock);
+				rootPointer.valid = RECORD_REGULAR;
+				rootPointer.blockPointer = freeDataBlock;
+				insertBlockPointerAt(indexBlockBuffer,rootPointer,0);
+				writeIndexBlockAt(freeIndexBlock,indexBlockBuffer);
 				//createRecord("..", RECORD_DIR);
 				//createRecord(".", RECORD_DIR);
 				initRootDir();
+				free(indexBlockBuffer);
 
 				return true;
 			}
 		}
 		printf("ERROR: O primeiro bloco de indice nao esta livre. Necesario formatar\n");
 	}
+	free(indexBlockBuffer);
 	return false;
 }
 
