@@ -407,8 +407,9 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 		for (recordIterator = recordPointer; recordIterator < numberOfRecordsPerDataBlock; recordIterator++) {
 			bufferRecord = bufferToDIR_RECORD(dataBlock, recordIterator * sizeof(bufferRecord));
 			// Achou o registro valido, calcula o seu numero equivalente
-			*record = bufferRecord;				
-			return (recordIterator + numberOfRecordsPerDataBlock * dataBlockNumber);
+			
+				*record = bufferRecord;				
+				return (recordIterator + numberOfRecordsPerDataBlock * dataBlockNumber);
 		}
 		// Nao esta nesse bloco, pegar o proximo
 		DWORD insideBlockPointerNumber = (dataBlockNumber % partInfo.numberOfPointers); // Vai -1?
@@ -956,7 +957,7 @@ int deleteFile(HANDLER toDelete){
 	BLOCK_POINTER fetchedDataBlockPtr, nextIndexBlockPtr;
 	DWORD currentIndexBlockPtr;
 	bool finishedToDelete = false;
-
+	
 	currentIndexBlockPtr = toDelete.record.indexAddress;
 	while (!finishedToDelete){	
 		getIndexBlockByPointer(bufferIndexBlock,currentIndexBlockPtr);
@@ -1147,10 +1148,12 @@ int delete2 (char *filename) {
 				free(filePath);
 
 				handler.dirIndexPtr = dirRecord.indexAddress;
+				
 
-				//Tudo que precisamos, bora deletar
-				return (deleteFile(handler));
+				
 			}
+			//Tudo que precisamos, bora deletar
+			return (deleteFile(handler));
 		}
 	}
 	printf("ERRO: Nao foi possivel deletar o arquivo: \"%s\"\n", filename);
