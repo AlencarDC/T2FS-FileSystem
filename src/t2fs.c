@@ -112,6 +112,20 @@ void cleanDisk() {
 	
 }
 
+void cleanIndexBlock(DWORD pointer) {
+	// Pointer eh o numero do bloco em relacao ao primeiro bloco de indice
+	BYTE *zeroBlock = calloc(partInfo.blockSize * SECTOR_SIZE, sizeof(BYTE)); // inicializa em 0
+	writeIndexBlockAt(pointer, zeroBlock);
+	free(zeroBlock);
+}
+
+void cleanDataBlock(DWORD pointer) {
+	// Pointer eh o numero do bloco em relacao ao primeiro bloco de indice
+	BYTE *zeroBlock = calloc(partInfo.blockSize * SECTOR_SIZE, sizeof(BYTE)); // inicializa em 0
+	writeDataBlockAt(pointer, zeroBlock);
+	free(zeroBlock);
+}
+
 SUPERBLOCK createSuperblock(int sectorsPerBlock) {
 	SUPERBLOCK superblock;
 
