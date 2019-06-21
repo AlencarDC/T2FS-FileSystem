@@ -48,7 +48,6 @@ void _printPartInfo() {
 
 DWORD getFreeIndexBlock() {
 	DWORD offset = searchBitmap(BITMAP_INDEX, 1);
-	printf("ofsset indexBlock %d\n", offset);
 	 if (offset >= 0 && setBitmap(BITMAP_INDEX, offset, 0) == 0)
 		return (offset);
 	
@@ -57,7 +56,6 @@ DWORD getFreeIndexBlock() {
 
 DWORD getFreeDataBlock() {
 	DWORD offset = searchBitmap(BITMAP_DATA, 1);
-	printf("ofsset dataBlock %d\n", offset);
 	if (offset >= 0 && setBitmap(BITMAP_DATA, offset, 0) == 0)
 		return (offset); 
 	
@@ -1001,7 +999,7 @@ Função:	Informa a identificação dos desenvolvedores do T2FS.
 -----------------------------------------------------------------------------*/
 int identify2 (char *name, int size) {
 	char *brosNames = (char*) malloc(sizeof(char) * size);
-	strcpy(brosNames, "Alencar da Costa\t\t00288544\nMatheus Woeffel Camargo\t\t00288543\nRaphael Scherpinski Brandao\t00112233\n");	
+	strcpy(brosNames, "Alencar da Costa\t\t00288544\nMatheus Woeffel Camargo\t\t00288543\nRaphael Scherpinski Brandao\t00291397\n");	
 	if (strlen(brosNames) > size)
 		return ERROR;
 	name = brosNames;
