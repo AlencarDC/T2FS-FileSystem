@@ -77,10 +77,8 @@ bool createRootDir() {
 	// Dessa forma o bloco de indice alocado para raiz sera o primeiro
 	if (rootDirIndex == -1) {
 		DWORD freeIndexBlock = getFreeIndexBlock(); // Espera-se que seja o primeiro bloco de indice
-		printf("freeIndexBlcok %d\n", freeIndexBlock);
 		if (freeIndexBlock == 0) {
 			DWORD freeDataBlock = getFreeDataBlock();
-			printf("freeDataBlock %d\n", freeDataBlock);
 			if (freeDataBlock >= 0) {
 				getIndexBlockByPointer(indexBlockBuffer, freeIndexBlock);
 				rootPointer.valid = RECORD_REGULAR;
@@ -1020,8 +1018,7 @@ int format2 (int sectors_per_block) {
 		// Escreve o superbloco 
 		SUPERBLOCK superblock = createSuperblock(sectors_per_block);
 		memcpy(buffer, &superblock, sizeof(SUPERBLOCK)); // so terá sentido se for usado mesmo endian na estrutura e no array
-		_printSuperblock(superblock);
-
+	
 		if (write_sector(partInfo.firstSectorAddress, buffer) != 0)
 			return ERROR;
 		
@@ -1041,7 +1038,6 @@ int format2 (int sectors_per_block) {
 		partInfo.dataBlocksStart = partInfo.indexBlocksStart + (superblock.indexBlockAreaSize * superblock.blockSize);
 		partInfo.numberOfPointers = superblock.numberOfPointers;
 		partInfo.blockSize = superblock.blockSize;
-		_printPartInfo();
 		
 		createRootDir();
 		//WARNING: Shouldn't we use init instead?
