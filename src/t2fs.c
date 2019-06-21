@@ -337,7 +337,7 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 int getDataBlockOfByte(DWORD offset, DWORD indexAddress, BYTE *buffer) {
 	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
 	DWORD logicBlockToRead, offsetInCurrentIndex;
-	DWORD offsetInBlock;
+	
 
 	//Fetch do bloco de indice (começa em 0)
 	DWORD currentIndexLevel = 0; 
@@ -345,8 +345,6 @@ int getDataBlockOfByte(DWORD offset, DWORD indexAddress, BYTE *buffer) {
 
 	//Posiciona num bloco logico o ponteiro
 	logicBlockToRead = offset / (partInfo.blockSize * SECTOR_SIZE);
-	//Determina o offset dentro do bloco logico acima
-	offsetInBlock = offset % (partInfo.blockSize * SECTOR_SIZE);
 	//Calcula o nível de indice necessário
 	DWORD indexLevelNeeded = logicBlockToRead / (partInfo.numberOfPointers - 1);
 	//Caso o nível de indice necessario para acessar seja maior que o nível acessado
@@ -364,6 +362,8 @@ int getDataBlockOfByte(DWORD offset, DWORD indexAddress, BYTE *buffer) {
 	DWORD realBlockToRead = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) *offsetInCurrentIndex).blockPointer;
 	//Leitura do bloco físico
 	getDataBlockByPointer(buffer,realBlockToRead);
+
+	return SUCCESS;
 }
 
 // WARNING TODO: desalacar (free) buffers
@@ -839,6 +839,8 @@ int updateDirRecord(HANDLER toBeUpdated){
 		}
 		acessedDirIndexPtr = indexBlockPointer.blockPointer;
 	}
+
+	return SUCCESS;
 }
 
 int createNavigationReferences(DWORD createdDirIndexPtr, DWORD parentDirIndexPtr){
@@ -949,6 +951,7 @@ int deleteRecordInParentDir(HANDLER toDelete){
 		}
 		acessedDirIndexPtr = indexBlockPointer.blockPointer;
 	}
+	return SUCCESS;
 }
 
 int deleteFile(HANDLER toDelete){

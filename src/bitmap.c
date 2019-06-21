@@ -21,13 +21,6 @@ static BITMAP_INFO bitmapInfo;
 static bool initialized = false;
 static BYTE *bufferBitmaps;
 
-static void _printBuffer(BYTE *buffer, int sizeInSectors) {
-  int i;
-  for (i = 0; i < sizeInSectors * SECTOR_SIZE; i+=4) {
-      printf("%02x %02x %02x %02x \n", buffer[i+0], buffer[i+1], buffer[i+2], buffer[i+3]);
-  }
-  printf("\n\n");
-}
 
 static int readBitmapFromDisk(BYTE **bitmap, DWORD sectorStart, DWORD size) {
   // size eh dado em setores
