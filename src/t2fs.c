@@ -856,6 +856,43 @@ int createNavigationReferences(DWORD createdDirIndexPtr, DWORD parentDirIndexPtr
 	}
 }
 
+int deleteFile(HANDLER toDelete){
+	int indexIterator;
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BLOCK_POINTER fetchedDataBlockPtr, nextIndexBlockPtr;
+	DWORD currentIndexBlockPtr;
+	bool finishedToDelete = false;
+
+	currentIndexBlockPtr = toDelete.record.indexAddress;
+	while (!finishedToDelete){	
+		getIndexBlockByPointer(bufferIndexBlock,currentIndexBlockPtr);
+
+		//Percorre os ponteiros para blocos de dados desalocando-os
+		for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
+			fetchedDataBlockPtr = bufferToBLOCK_POINTER(bufferIndexBlock,indexIterator * sizeof(BLOCK_POINTER));
+			if(fetchedDataBlockPtr.valid == RECORD_REGULAR){
+				freeDataBlock(fetchedDataBlockPtr.blockPointer);
+				//Escreve zero.
+			}
+		}
+
+		nextIndexBlockPtr = bufferToBLOCK_POINTER(bufferIndexBlock, indexIterator * sizeof(BLOCK_POINTER));
+		if(nextIndexBlockPtr.valid == INVALID_BLOCK_PTR){//Se ptr pra proximo indice é invalido, acaba
+			freeIndexBlock(currentIndexBlockPtr);
+			//escreve zero
+			finishedToDelete = true;
+		}
+		else{
+			freeIndexBlock(currentIndexBlockPtr);
+			//escreve zero
+			currentIndexBlockPtr = nextIndexBlockPtr.blockPointer;
+		}	
+	}
+	free(bufferIndexBlock);
+
+
+}
+
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
