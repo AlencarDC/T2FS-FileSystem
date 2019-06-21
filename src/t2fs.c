@@ -21,8 +21,8 @@ DWORD currentDirIndexPointer = -1; // Ponteiro de bloco de indice de diretorio a
 DWORD rootDirIndex = -1; // Numero/endereco do Bloco de indice da raiz
 
 static PART_INFO partInfo;	// Estrutura que armazenara enderecos e limites da particao
-HANDLER openedFiles[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos arquivos abertos
-HANDLER openedDirs[MAX_FILE_OPEN];	// Estrutura armazenadora das informacoes dos diretorios abertos
+HANDLER openedFiles[MAX_FILE_OPEN + 1];	// Estrutura armazenadora das informacoes dos arquivos abertos
+HANDLER openedDirs[MAX_FILE_OPEN + 1];	// Estrutura armazenadora das informacoes dos diretorios abertos
 
 
 void _printSuperblock(SUPERBLOCK superblock) {
