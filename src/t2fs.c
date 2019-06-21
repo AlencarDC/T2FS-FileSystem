@@ -367,7 +367,7 @@ int getDataBlockOfByte(DWORD offset, DWORD indexAddress, BYTE *buffer) {
 }
 
 // WARNING TODO: desalacar (free) buffers
-DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD recordPointer) {
+int getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD recordPointer) {
 	BYTE indexBlock[SECTOR_SIZE * partInfo.blockSize];
 	BYTE dataBlock[SECTOR_SIZE * partInfo.blockSize];
 	BLOCK_POINTER bufferPointer;
@@ -409,6 +409,7 @@ DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD record
 			// Achou o registro valido, calcula o seu numero equivalente
 			*record = bufferRecord;				
 			return (recordIterator + numberOfRecordsPerDataBlock * dataBlockNumber);
+			
 		}
 		// Nao esta nesse bloco, pegar o proximo
 		DWORD insideBlockPointerNumber = (dataBlockNumber % partInfo.numberOfPointers); // Vai -1?
@@ -1386,10 +1387,12 @@ int rmdir2 (char *pathname) {
 				free(filePath);
 
 				handler.dirIndexPtr = dirRecord.indexAddress;
-
-				//Tudo que precisamos, bora deletar
-				return (deleteFile(handler));
 			}
+			//Verificar se ha regisitros validos
+			DWORD recordPointer = getNextDirRecordValid(&dirRecord, handler.record.indexAddress, 2);
+			printf("%d %d\n", recordPointer, dirRecord.type);
+			if (dirRecord.type == RECORD_INVALID) // A partir do 2 por causa do . e ..
+				return (deleteFile(handler));
 		}
 	}
 	printf("ERRO: Nao foi possivel deletar o arquivo: \"%s\"\n", pathname);

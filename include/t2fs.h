@@ -152,6 +152,10 @@ int getDataBlockByPointer(BYTE *dataBlock,DWORD pointer);
 
 //Checa se a operação de leitura está dentro do tamanho do arquivo
 bool readIsWithinBoundary(HANDLER toCheck, int size);
+
+bool writeBlockAt(DWORD pointer, int type, BYTE *buffer);
+bool writeIndexBlockAt(DWORD pointer, BYTE *buffer);
+bool writeDataBlockAt(DWORD pointer, BYTE *buffer);
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
