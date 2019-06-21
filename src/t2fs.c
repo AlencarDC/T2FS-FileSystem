@@ -334,6 +334,37 @@ int getRecordByPath(DIR_RECORD *record, char *path) {
 	return SUCCESS;
 }
 
+int getDataBlockOfByte(DWORD offset, DWORD indexAddress, BYTE *buffer) {
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	DWORD logicBlockToRead, offsetInCurrentIndex;
+	DWORD offsetInBlock;
+
+	//Fetch do bloco de indice (começa em 0)
+	DWORD currentIndexLevel = 0; 
+	getIndexBlockByPointer(bufferIndexBlock, indexAddress);
+
+	//Posiciona num bloco logico o ponteiro
+	logicBlockToRead = offset / (partInfo.blockSize * SECTOR_SIZE);
+	//Determina o offset dentro do bloco logico acima
+	offsetInBlock = offset % (partInfo.blockSize * SECTOR_SIZE);
+	//Calcula o nível de indice necessário
+	DWORD indexLevelNeeded = logicBlockToRead / (partInfo.numberOfPointers - 1);
+	//Caso o nível de indice necessario para acessar seja maior que o nível acessado
+	if(indexLevelNeeded > currentIndexLevel){
+		//Itera sobre os níveis de indice até achar o correto
+		while (currentIndexLevel < indexLevelNeeded){
+			currentIndexLevel++;
+			DWORD nextIndex = bufferToBLOCK_POINTER(bufferIndexBlock, (partInfo.numberOfPointers - 1) * sizeof(BLOCK_POINTER)).blockPointer;
+			getIndexBlockByPointer(bufferIndexBlock,nextIndex);
+		}
+	}
+	//Tradução do bloco lógico para o offset no nivel corrente
+	offsetInCurrentIndex = logicBlockToRead - (currentIndexLevel * (partInfo.numberOfPointers - 1));
+	//Tradução do bloco lógico para físico
+	DWORD realBlockToRead = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) *offsetInCurrentIndex).blockPointer;
+	//Leitura do bloco físico
+	getDataBlockByPointer(buffer,realBlockToRead);
+}
 
 // WARNING TODO: desalacar (free) buffers
 DWORD getNextDirRecordValid(DIR_RECORD *record, DWORD indexPointer, DWORD recordPointer) {
@@ -1003,6 +1034,8 @@ int delete2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	
+
 	return ERROR;
 }
 
@@ -1123,6 +1156,13 @@ Função:	Função usada para truncar um arquivo. Remove do arquivo
 int truncate2 (FILE2 handle) {
 	if (initialized == false && init() == false)
 		return ERROR;
+
+	// Remove o conteudo dentro do bloco de dados atual
+	BYTE *bufferData = malloc(SECTOR_SIZE * partInfo.blockSize);
+	getDataBlockOfByte(openedFiles[handle].pointer, openedFiles[handle].record.indexAddress, bufferData);
+	
+
+	// Remove os blocos de dados na sequencia, desfazendo o encadeamento
 
 	return ERROR;
 }
