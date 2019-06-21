@@ -100,6 +100,13 @@ typedef struct {
 /********************************************************************************/
 /************************************ PRIVATE ***********************************/
 /********************************************************************************/
+
+bool writeBlockAt(DWORD pointer, int type, BYTE *buffer);
+
+bool writeIndexBlockAt(DWORD pointer, BYTE *buffer); 
+
+bool writeDataBlockAt(DWORD pointer, BYTE *buffer);
+
 //Inicializa os handles de diretório
 void initDirHandles();
 
@@ -156,6 +163,8 @@ bool readIsWithinBoundary(HANDLER toCheck, int size);
 bool writeBlockAt(DWORD pointer, int type, BYTE *buffer);
 bool writeIndexBlockAt(DWORD pointer, BYTE *buffer);
 bool writeDataBlockAt(DWORD pointer, BYTE *buffer);
+
+int createNavigationReferences(DWORD createdDirIndexPtr, DWORD parentDirIndexPtr);
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
 /********************************************************************************/
