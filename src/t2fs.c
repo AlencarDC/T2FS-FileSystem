@@ -1123,8 +1123,37 @@ int delete2 (char *filename) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
-	
+	DIR_RECORD dirRecord;
+	HANDLER handler;
+	// Busca o registro do arquivos seguindo pelo seu path
+	if (getRecordByPath(&dirRecord, filename) == SUCCESS) {
+		if (dirRecord.type == RECORD_LINK || dirRecord.type == RECORD_REGULAR) {
+			handler.free = false;
+			handler.path = filename;
+			handler.record = dirRecord;
+			handler.pointer = 0;
 
+			// Remover nome do arquivo do path e buscar o index block do local
+			char *lastSlash = strrchr(filename, '/');
+			if (lastSlash == NULL) {
+				// arquivo no current dir
+				handler.dirIndexPtr = currentDirIndexPointer;
+			} else {
+				int slashIndex = lastSlash - filename;
+				char *filePath = malloc((slashIndex + 1) * sizeof(char));
+				memcpy(filePath, filename, slashIndex);
+				filePath[slashIndex] = '\0';
+				getRecordByPath(&dirRecord, filePath);
+				free(filePath);
+
+				handler.dirIndexPtr = dirRecord.indexAddress;
+
+				//Tudo que precisamos, bora deletar
+				return (deleteFile(handler));
+			}
+		}
+	}
+	printf("ERRO: Nao foi possivel deletar o arquivo: \"%s\"\n", filename);
 	return ERROR;
 }
 
@@ -1333,6 +1362,37 @@ int rmdir2 (char *pathname) {
 	if (initialized == false && init() == false)
 		return ERROR;
 
+	DIR_RECORD dirRecord;
+	HANDLER handler;
+	// Busca o registro do arquivos seguindo pelo seu path
+	if (getRecordByPath(&dirRecord, pathname) == SUCCESS) {
+		if (dirRecord.type == RECORD_DIR) {
+			handler.free = false;
+			handler.path = pathname;
+			handler.record = dirRecord;
+			handler.pointer = 0;
+
+			// Remover nome do arquivo do path e buscar o index block do local
+			char *lastSlash = strrchr(pathname, '/');
+			if (lastSlash == NULL) {
+				// arquivo no current dir
+				handler.dirIndexPtr = currentDirIndexPointer;
+			} else {
+				int slashIndex = lastSlash - pathname;
+				char *filePath = malloc((slashIndex + 1) * sizeof(char));
+				memcpy(filePath, pathname, slashIndex);
+				filePath[slashIndex] = '\0';
+				getRecordByPath(&dirRecord, filePath);
+				free(filePath);
+
+				handler.dirIndexPtr = dirRecord.indexAddress;
+
+				//Tudo que precisamos, bora deletar
+				return (deleteFile(handler));
+			}
+		}
+	}
+	printf("ERRO: Nao foi possivel deletar o arquivo: \"%s\"\n", pathname);
 	return ERROR;
 }
 
