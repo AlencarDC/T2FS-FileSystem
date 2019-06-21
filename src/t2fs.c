@@ -870,6 +870,55 @@ int createNavigationReferences(DWORD createdDirIndexPtr, DWORD parentDirIndexPtr
 	}
 }
 
+int deleteRecordInParentDir(HANDLER toDelete){
+	bool recordFound = false;
+	BYTE *bufferDataBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
+	DWORD acessedDirIndexPtr = toDelete.dirIndexPtr;
+	BLOCK_POINTER dataBlockPointer, indexBlockPointer;
+	int indexIterator, blockIterator;
+
+	DIR_RECORD fetchedRecord;
+
+	int numberOfDirRecords = (partInfo.blockSize * SECTOR_SIZE) / sizeof(DIR_RECORD);
+
+	while(!recordFound){
+		//Fetch bloco de indice
+		getIndexBlockByPointer(bufferIndexBlock,acessedDirIndexPtr);
+		//Percorre os ponteiros simples de bloco
+		for(indexIterator = 0; indexIterator < partInfo.numberOfPointers - 1; indexIterator++){
+			dataBlockPointer = bufferToBLOCK_POINTER(bufferIndexBlock,indexIterator * sizeof(BLOCK_POINTER));
+			if(dataBlockPointer.valid == RECORD_REGULAR){
+				//Fetch bloco de dados
+				getDataBlockByPointer(bufferDataBlock,dataBlockPointer.blockPointer);
+				for(blockIterator = 0; blockIterator < numberOfDirRecords; blockIterator++){
+					 fetchedRecord = bufferToDIR_RECORD(bufferDataBlock,blockIterator * sizeof(DIR_RECORD));
+					 //Caso as strings sejam iguais, achou o record, logo atualiza ele na posição achada
+					 if(strcmp(fetchedRecord.name,toDelete.record.name) == 0){
+						 toDelete.record.type = RECORD_INVALID;
+						 toDelete.record.byteFileSize = 0;
+						 strcpy(toDelete.record.name, "\0");
+						 toDelete.record.indexAddress = 0;
+						 insertDirEntryAt(bufferDataBlock,toDelete.record,blockIterator);
+						 writeDataBlockAt(dataBlockPointer.blockPointer,bufferDataBlock);
+						 free(bufferDataBlock);
+						 free(bufferIndexBlock);
+						 return SUCCESS;
+					 }
+				}
+			}
+		}
+		//Pega ponteiro para proximo bloco de indice
+		indexBlockPointer = bufferToBLOCK_POINTER(bufferIndexBlock,sizeof(BLOCK_POINTER) * indexIterator);
+		if(indexBlockPointer.valid == INVALID_BLOCK_PTR){
+			free(bufferDataBlock);
+			free(bufferIndexBlock);
+			return ERROR;
+		}
+		acessedDirIndexPtr = indexBlockPointer.blockPointer;
+	}
+}
+
 int deleteFile(HANDLER toDelete){
 	int indexIterator;
 	BYTE *bufferIndexBlock = malloc(SECTOR_SIZE * partInfo.blockSize);
@@ -886,26 +935,27 @@ int deleteFile(HANDLER toDelete){
 			fetchedDataBlockPtr = bufferToBLOCK_POINTER(bufferIndexBlock,indexIterator * sizeof(BLOCK_POINTER));
 			if(fetchedDataBlockPtr.valid == RECORD_REGULAR){
 				freeDataBlock(fetchedDataBlockPtr.blockPointer);
-				//Escreve zero.
+				cleanDataBlock(fetchedDataBlockPtr.blockPointer);
 			}
 		}
 
 		nextIndexBlockPtr = bufferToBLOCK_POINTER(bufferIndexBlock, indexIterator * sizeof(BLOCK_POINTER));
 		if(nextIndexBlockPtr.valid == INVALID_BLOCK_PTR){//Se ptr pra proximo indice é invalido, acaba
 			freeIndexBlock(currentIndexBlockPtr);
-			//escreve zero
+			cleanIndexBlock(currentIndexBlockPtr);
 			finishedToDelete = true;
 		}
 		else{
 			freeIndexBlock(currentIndexBlockPtr);
-			//escreve zero
+			cleanIndexBlock(currentIndexBlockPtr);
 			currentIndexBlockPtr = nextIndexBlockPtr.blockPointer;
 		}	
 	}
 	free(bufferIndexBlock);
-
-
+	return deleteRecordInParentDir(toDelete);
 }
+
+
 
 /********************************************************************************/
 /************************************ PUBLIC ************************************/
